@@ -6,7 +6,13 @@ Thanks for your interest in contributing! This guide will help you get started.
 
 - Node.js >= 20
 - pnpm >= 10
-- PostgreSQL (local or [Neon](https://neon.tech))
+- PostgreSQL with the [pgvector](https://github.com/pgvector/pgvector) extension, local or [Neon](https://neon.tech) (Neon supports it)
+
+To run a local database with Docker that matches the default `DATABASE_URL` in `apps/api/.env.example`:
+
+```bash
+docker run -d --name unishare-db -e POSTGRES_PASSWORD=password -e POSTGRES_DB=unishare -p 5432:5432 pgvector/pgvector:pg17
+```
 
 ## Setup
 
@@ -24,7 +30,15 @@ Thanks for your interest in contributing! This guide will help you get started.
    cp apps/web/.env.example apps/web/.env
    ```
 
-4. Run database migrations and seed:
+4. Generate the Prisma client and the frontend API client.
+   Both are gitignored, so a fresh clone needs this step:
+
+   ```bash
+   pnpm --filter api db:generate
+   pnpm --filter web api:generate
+   ```
+
+5. Run database migrations and seed:
 
    ```bash
    cd apps/api
@@ -32,7 +46,7 @@ Thanks for your interest in contributing! This guide will help you get started.
    pnpm prisma db seed
    ```
 
-5. Start the development servers:
+6. Start the development servers:
 
    ```bash
    pnpm dev
