@@ -35,6 +35,11 @@ with signed logout tokens. The web pages were not viewed in a browser (component
   whose uniauth email is unverified gets `account_not_linked` instead of being attached to
   their unishare account (the safe default — linking on an unverified email would let anyone
   claim an account). The phase 5 import must create these rows.
+- **Phase 5 ordering:** run the import (users, accounts, `account` link rows) **before**
+  production uniauth accepts public sign-ups. Otherwise someone can register an existing
+  unishare user's email on uniauth first, and the import collides with that account.
+- **Silent check scope:** at most once per 10 minutes per browser (cookie, all tabs), skipped
+  for crawlers; protected deep links go through `/login?next=` so the check returns there.
 - **Pre-existing:** unishare's own session cookie is still set on `.psstee.dev` in production
   (`crossSubDomainCookies`). Serving Better Auth from the web origin would make it host-only.
 
