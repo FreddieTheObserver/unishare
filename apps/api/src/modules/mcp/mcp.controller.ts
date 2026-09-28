@@ -6,11 +6,12 @@ import { oAuthDiscoveryMetadata, oAuthProtectedResourceMetadata } from 'better-a
 import { Throttle } from '@nestjs/throttler'
 import { ConfigService } from '@nestjs/config'
 import type { Request, Response } from 'express'
-import { auth } from '@/auth/auth.config'
+import { auth, mcpScopes } from '@/auth/auth.config'
 import { McpExceptionFilter } from '@/common/filters/mcp-exception.filter'
 import { McpAuthGuard, type RequestWithMcpSession } from '@/common/guards/mcp-auth.guard'
 import { UserThrottlerGuard } from '@/common/guards/user-throttler.guard'
 import { McpService } from './mcp.service'
+import { mcpAuthIssuer, protectedResourceMetadata } from './mcp-token.verifier'
 
 const oauthDiscoveryHandler = oAuthDiscoveryMetadata(auth)
 const protectedResourceHandler = oAuthProtectedResourceMetadata(auth)
@@ -27,13 +28,17 @@ export class McpController {
     private readonly config: ConfigService,
   ) {}
 
+  // uniauth mode: unishare is only the resource server. Clients find the
+  // authorization server through the protected-resource metadata below.
   @Get('.well-known/oauth-authorization-server')
   discovery(@Req() req: Request, @Res() res: Response) {
+    if (mcpAuthIssuer) return res.status(404).json({ error: 'not_found' })
     return this.sendWebResponse(oauthDiscoveryHandler(this.toWebRequest(req)), res)
   }
 
   @Get(['.well-known/oauth-protected-resource', '.well-known/oauth-protected-resource/mcp'])
   protectedResource(@Req() req: Request, @Res() res: Response) {
+    if (mcpAuthIssuer) return res.json(protectedResourceMetadata(mcpScopes))
     return this.sendWebResponse(protectedResourceHandler(this.toWebRequest(req)), res)
   }
 

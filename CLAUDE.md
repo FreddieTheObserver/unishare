@@ -179,4 +179,4 @@ CI (`ci.yml`) order matters and mirrors what you need locally: install → `db:g
 
 `apps/api/.env` is required (`apps/api/.env.example` documents it). `DATABASE_URL`, `BETTER_AUTH_SECRET`, `BETTER_AUTH_URL`, `FRONTEND_URL`, `COOKIE_DOMAIN` are hard-required in production — `auth.config.ts` throws at startup if any is missing. Optional blocks: OAuth providers, S3 (`S3_ENDPOINT`/`S3_BUCKET`/keys/`STORAGE_PUBLIC_URL`), `REDIS_URL`, `ACADEMIC_START_MONTH`, and AI summarization (`AI_SUMMARY_PROVIDER` = `groq` | `gemini` | `ollama`, empty to disable).
 
-`apps/web/.env` needs `API_URL` (used by `next.config.ts` rewrites, so `/api/*` proxies to the backend), `NEXT_PUBLIC_API_URL`, `NEXT_PUBLIC_APP_URL`. New external image hosts must be added to `next.config.ts` `remotePatterns`.
+`apps/web/.env` needs `API_URL` (used by `next.config.ts` rewrites, so `/api/*` proxies to the backend), `NEXT_PUBLIC_API_URL`, `NEXT_PUBLIC_APP_URL`. New external image hosts go in `lib/image-hosts.ts` (used by `next.config.ts` `remotePatterns` and by `UserAvatar`, which falls back to initials for unlisted hosts).

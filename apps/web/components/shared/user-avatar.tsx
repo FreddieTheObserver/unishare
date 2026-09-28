@@ -1,4 +1,6 @@
 import Image from 'next/image'
+import { isRenderableImage } from '@/lib/image-hosts'
+import { avatarGradient, initials as initialsOf } from '@/lib/avatar'
 import { cn } from '@/lib/utils'
 
 const sizeClasses = {
@@ -24,19 +26,22 @@ interface UserAvatarProps {
 }
 
 export function UserAvatar({ name, image, size, className, priority }: UserAvatarProps) {
-  const initials = name
-    .split(' ')
-    .map((n) => n[0])
-    .join('')
+  const showImage = !!image && isRenderableImage(image)
   return (
     <div
       className={cn(
         sizeClasses[size],
-        'relative bg-border flex items-center justify-center font-mono font-medium text-foreground overflow-hidden',
+        'relative flex items-center justify-center font-mono font-medium overflow-hidden',
+        showImage
+          ? 'bg-border text-foreground'
+          : 'text-white [text-shadow:0_1px_2px_rgb(0_0_0/0.25)]',
         className,
       )}
+      // No picture: a gradient picked from the name (same palette as uniauth's account page).
+      style={showImage ? undefined : { background: avatarGradient(name) }}
     >
-      {image ? (
+      {/* Unlisted hosts would throw in next/image; show initials instead. */}
+      {showImage ? (
         <Image
           src={image}
           alt={name}
@@ -46,7 +51,7 @@ export function UserAvatar({ name, image, size, className, priority }: UserAvata
           priority={priority}
         />
       ) : (
-        initials
+        initialsOf(name)
       )}
     </div>
   )

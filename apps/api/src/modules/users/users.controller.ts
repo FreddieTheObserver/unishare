@@ -16,6 +16,7 @@ import type { Request } from 'express'
 import { fromNodeHeaders } from 'better-auth/node'
 import { ResponseMessage } from '@/common/decorators/response-message.decorator'
 import { auth } from '@/auth/auth.config'
+import { isUniauthMode } from '@/auth/auth-mode'
 import { UsersService } from './users.service'
 import { UpdateProfileDto } from './dto/update-profile.dto'
 import { UpdateAcademicProfileDto } from './dto/update-academic-profile.dto'
@@ -50,6 +51,9 @@ export class UsersController {
     @Body() dto: SetPasswordDto,
   ) {
     void session
+    // Passwords live in uniauth in uniauth mode (its /account page), never in unishare.
+    if (isUniauthMode)
+      throw new BadRequestException('Passwords are managed on your uniauth account')
     const result = await auth.api.setPassword({
       body: { newPassword: dto.newPassword },
       headers: fromNodeHeaders(req.headers),

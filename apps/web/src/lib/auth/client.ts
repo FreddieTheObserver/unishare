@@ -1,5 +1,5 @@
 import { createAuthClient } from 'better-auth/react'
-import { inferAdditionalFields, adminClient } from 'better-auth/client/plugins'
+import { inferAdditionalFields, adminClient, genericOAuthClient } from 'better-auth/client/plugins'
 import { ac, roles } from '../permissions'
 
 export const authClient = createAuthClient({
@@ -15,5 +15,7 @@ export const authClient = createAuthClient({
       },
     }),
     adminClient({ ac, roles }),
+    // Sign-in through uniauth (provider id `uniauth`) when NEXT_PUBLIC_AUTH_MODE=uniauth.
+    genericOAuthClient(),
   ],
 })

@@ -34,7 +34,7 @@ import { useNotificationsControllerFindAll } from '@/src/lib/api/generated/notif
 import { useUnreadChatCount } from '@/hooks/use-unread-chat-count'
 import { useState } from 'react'
 import { Drawer, DrawerContent, DrawerTitle, DrawerTrigger } from '@/components/ui/drawer'
-import { authClient } from '@/src/lib/auth/client'
+import { signOut } from '@/src/lib/auth/sign-out'
 import { UserAvatar } from '@/components/shared/user-avatar'
 import { FeedbackDialog } from '@/components/feedback/feedback-dialog'
 import { Button } from '@/components/ui/button'
@@ -139,8 +139,7 @@ export function MobileNav() {
   const [feedbackOpen, setFeedbackOpen] = useState(false)
 
   async function handleSignOut() {
-    await authClient.signOut()
-    router.replace('/login')
+    await signOut(router)
   }
 
   return (
