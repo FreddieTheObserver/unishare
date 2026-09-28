@@ -1,0 +1,97 @@
+'use client'
+
+import { useState } from 'react'
+import Image from 'next/image'
+import Link from 'next/link'
+import { useSearchParams } from 'next/navigation'
+import { Button } from '@/components/ui/button'
+import { signInWithUniauth } from '@/src/lib/auth/uniauth'
+
+// Errors uniauth can hand back on the callback. login_required only comes from the silent
+// check and is not an error from the user's point of view.
+const errorMessages: Record<string, string> = {
+  access_denied: 'Sign-in was cancelled.',
+  BANNED_USER: 'Your Unishare account has been suspended.',
+  account_not_linked:
+    'This email already has a Unishare account that is not linked to uniauth yet. Contact support.',
+}
+
+/** AUTH_MODE=uniauth login: one button to uniauth's central sign-in, plus guest access. */
+export function UniauthLogin() {
+  const params = useSearchParams()
+  const [loading, setLoading] = useState(false)
+  const error = params.get('error')
+  const message =
+    error && error !== 'login_required'
+      ? (errorMessages[error] ?? 'Sign-in failed. Please try again.')
+      : ''
+
+  async function continueWithUniauth() {
+    setLoading(true)
+    await signInWithUniauth({ returnTo: `${window.location.origin}/feed` }).catch(() =>
+      setLoading(false),
+    )
+  }
+
+  return (
+    <div className="min-h-screen flex">
+      <div className="hidden lg:flex flex-col justify-between w-[55%] bg-surface-dark p-10">
+        <div className="flex items-center gap-2.5">
+          <Image
+            src="/icon.svg"
+            alt="Unishare logo"
+            width={28}
+            height={28}
+            className="rounded-[6px]"
+          />
+          <span className="font-mono text-lg font-bold text-[#F7F3EE]">Unishare</span>
+        </div>
+        <blockquote className="max-w-xl">
+          <p className="text-4xl xl:text-5xl font-extrabold leading-[1.15] text-[#F7F3EE] tracking-tight text-balance">
+            Every lecture note and study guide {'—'}{' '}
+            <span className="hand-underline text-[#fbbf24]">shared</span>{' '}
+            {'by students who’ve been there.'}
+          </p>
+        </blockquote>
+        <div />
+      </div>
+
+      <div className="flex flex-col items-center justify-center flex-1 bg-background px-6">
+        <div className="lg:hidden flex items-center gap-2.5 mb-10">
+          <Image
+            src="/icon.svg"
+            alt="Unishare logo"
+            width={32}
+            height={32}
+            className="rounded-[6px]"
+          />
+          <span className="font-mono text-lg font-bold text-foreground">Unishare</span>
+        </div>
+
+        <div className="w-full max-w-sm">
+          <h1 className="text-2xl font-semibold text-foreground text-center">Sign in</h1>
+          <p className="text-sm text-text-secondary text-center mt-2 mb-8">
+            One unicorp account for Unishare and every other unicorp app
+          </p>
+
+          <Button onClick={continueWithUniauth} disabled={loading} className="w-full h-10.5">
+            {loading ? 'Redirecting…' : 'Continue'}
+          </Button>
+          {message && <p className="text-xs text-destructive mt-3 text-center">{message}</p>}
+
+          <div className="flex items-center gap-4 mt-6">
+            <div className="flex-1 h-px bg-border" />
+          </div>
+          <div className="flex justify-center mt-4">
+            <Link
+              href="/feed"
+              className="text-sm text-text-muted hover:text-foreground transition-colors duration-150"
+            >
+              Continue as guest
+            </Link>
+          </div>
+        </div>
+      </div>
+    </div>
+  )
+}
