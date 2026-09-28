@@ -1,11 +1,11 @@
 'use client'
 
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import Image from 'next/image'
 import Link from 'next/link'
 import { useSearchParams } from 'next/navigation'
 import { Button } from '@/components/ui/button'
-import { signInWithUniauth } from '@/src/lib/auth/uniauth'
+import { signInWithUniauth, silentCheckDone } from '@/src/lib/auth/uniauth'
 
 // Errors uniauth can hand back on the callback. login_required only comes from the silent
 // check and is not an error from the user's point of view.
@@ -16,11 +16,27 @@ const errorMessages: Record<string, string> = {
     'This email already has a Unishare account that is not linked to uniauth yet. Contact support.',
 }
 
+/** A same-origin path to return to (the proxy passes the protected page as ?next=). */
+function safeNext(value: string | null) {
+  return value && value.startsWith('/') && !value.startsWith('//') ? value : '/feed'
+}
+
 /** AUTH_MODE=uniauth login: one button to uniauth's central sign-in, plus guest access. */
 export function UniauthLogin() {
   const params = useSearchParams()
-  const [loading, setLoading] = useState(false)
+  const next = safeNext(params.get('next'))
   const error = params.get('error')
+  // Someone signed in on another app reaches a protected page signed out here: check
+  // uniauth silently first and only show the button if they aren't signed in there.
+  const [checking, setChecking] = useState(!error)
+  const [loading, setLoading] = useState(false)
+
+  useEffect(() => {
+    if (error || silentCheckDone()) return setChecking(false)
+    signInWithUniauth({ returnTo: `${window.location.origin}${next}`, silent: true }).catch(() =>
+      setChecking(false),
+    )
+  }, [error, next])
   const message =
     error && error !== 'login_required'
       ? (errorMessages[error] ?? 'Sign-in failed. Please try again.')
@@ -28,10 +44,12 @@ export function UniauthLogin() {
 
   async function continueWithUniauth() {
     setLoading(true)
-    await signInWithUniauth({ returnTo: `${window.location.origin}/feed` }).catch(() =>
+    await signInWithUniauth({ returnTo: `${window.location.origin}${next}` }).catch(() =>
       setLoading(false),
     )
   }
+
+  if (checking) return null
 
   return (
     <div className="min-h-screen flex">

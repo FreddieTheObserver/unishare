@@ -1,7 +1,25 @@
 import { authClient } from './client'
 
-/** Set once per browser session so a signed-out visitor is only silently checked once. */
-const SILENT_KEY = 'unishare:uniauth-silent-checked'
+/**
+ * A signed-out visitor is silently checked at most once per 10 minutes across all tabs, so
+ * browsing signed-out doesn't bounce through uniauth on every page, yet signing in on another
+ * app is still picked up soon after.
+ */
+const CHECKED_COOKIE = 'unishare_uniauth_checked'
+const CHECK_INTERVAL_SECONDS = 600
+
+function markSilentChecked() {
+  document.cookie = `${CHECKED_COOKIE}=1; Max-Age=${CHECK_INTERVAL_SECONDS}; Path=/; SameSite=Lax`
+}
+
+const CRAWLER = /bot|crawl|spider|slurp|preview|facebookexternalhit|embedly/i
+
+/** True when a silent check shouldn't run now: done recently, or not a person browsing. */
+export function silentCheckDone() {
+  if (CRAWLER.test(navigator.userAgent)) return true
+  return document.cookie.split('; ').some((c) => c.startsWith(`${CHECKED_COOKIE}=`))
+}
+
 /** Where to go back to if uniauth answers with an error (see app/(auth)/auth/return). */
 const RETURN_KEY = 'unishare:uniauth-return-to'
 
@@ -16,22 +34,6 @@ export function takeReturnTo(): string | null {
       : null
   } catch {
     return null
-  }
-}
-
-function markSilentChecked() {
-  try {
-    sessionStorage.setItem(SILENT_KEY, '1')
-  } catch {
-    // Storage blocked: at worst the check runs again next page load.
-  }
-}
-
-export function silentCheckDone() {
-  try {
-    return sessionStorage.getItem(SILENT_KEY) === '1'
-  } catch {
-    return true // can't remember the attempt, so don't risk a redirect loop
   }
 }
 

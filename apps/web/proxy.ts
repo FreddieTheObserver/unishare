@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import type { NextRequest } from 'next/server'
 import { getSessionCookie } from 'better-auth/cookies'
+import { isUniauthMode } from '@/src/lib/auth/mode'
 
 const PROTECTED_PATHS = ['/my-posts', '/profile', '/posts/new', '/admin']
 
@@ -13,7 +14,10 @@ export function proxy(request: NextRequest) {
   const hasSession = getSessionCookie(request)
 
   if (!hasSession && isProtected(pathname)) {
-    return NextResponse.redirect(new URL('/login', request.url))
+    const login = new URL('/login', request.url)
+    // uniauth mode: the login page checks uniauth silently and returns here.
+    if (isUniauthMode) login.searchParams.set('next', `${pathname}${request.nextUrl.search}`)
+    return NextResponse.redirect(login)
   }
 
   if (hasSession && pathname === '/login') {
