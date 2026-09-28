@@ -17,6 +17,8 @@ import { EditProfileForm } from '@/components/profile/edit-profile-form'
 import { ChangePasswordForm } from '@/components/profile/change-password-form'
 import { ConnectedAccountsCard } from '@/components/profile/connected-accounts-card'
 import { DangerZoneCard } from '@/components/profile/danger-zone-card'
+import { UniauthAccountCard } from '@/components/profile/uniauth-account-card'
+import { isUniauthMode } from '@/src/lib/auth/mode'
 import { Button } from '@/components/ui/button'
 import { Skeleton } from '@/components/ui/skeleton'
 import { ProfileTabs, type Tab } from '@/components/profile/profile-tabs'
@@ -40,8 +42,14 @@ function ProfileContent({ user }: { user: UserProfileEntity }) {
     <>
       <ProfileHeaderCard user={user} />
       <EditProfileForm user={user} />
-      <ChangePasswordForm />
-      <ConnectedAccountsCard />
+      {isUniauthMode ? (
+        <UniauthAccountCard />
+      ) : (
+        <>
+          <ChangePasswordForm />
+          <ConnectedAccountsCard />
+        </>
+      )}
       <DangerZoneCard />
       <ProfileTabs
         activeTab={activeTab}

@@ -15,6 +15,7 @@ import {
 import type { UserProfileEntity } from '@/src/lib/api/generated/unishareAPI.schemas'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
+import { isUniauthMode } from '@/src/lib/auth/mode'
 import { Textarea } from '@/components/ui/textarea'
 import { Form, FormControl, FormField, FormItem, FormMessage } from '@/components/ui/form'
 import {
@@ -128,8 +129,12 @@ export function EditProfileForm({ user }: EditProfileFormProps) {
                   Display Name
                 </label>
                 <FormControl>
-                  <Input type="text" {...field} />
+                  {/* uniauth mode: the name comes from the unicorp account at every sign-in. */}
+                  <Input type="text" {...field} disabled={isUniauthMode} />
                 </FormControl>
+                {isUniauthMode && (
+                  <p className="text-xs text-text-muted">Change it in your unicorp account.</p>
+                )}
                 <FormMessage className="text-xs" />
               </FormItem>
             )}
