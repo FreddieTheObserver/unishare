@@ -21,13 +21,7 @@ export function UniauthAccountCard() {
           unicorp account, used by every unicorp app.
         </p>
         <Button variant="outline" size="sm" asChild>
-          <a
-            href={uniauthAccountURL(
-              `${typeof window === 'undefined' ? '' : window.location.origin}/profile`,
-            )}
-          >
-            Manage
-          </a>
+          <a href={uniauthAccountURL('/profile')}>Manage</a>
         </Button>
       </div>
     </div>

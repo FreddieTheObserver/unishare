@@ -175,12 +175,7 @@ export function DangerZoneCard() {
             {isUniauthMode ? (
               <>
                 Deletes your Unishare profile and content. Your unicorp account stays; delete it on{' '}
-                <a
-                  href={uniauthAccountURL(
-                    `${typeof window === 'undefined' ? '' : window.location.origin}/`,
-                  )}
-                  className="underline hover:text-foreground"
-                >
+                <a href={uniauthAccountURL('/')} className="underline hover:text-foreground">
                   your account page
                 </a>
                 .

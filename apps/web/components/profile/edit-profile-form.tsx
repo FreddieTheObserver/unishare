@@ -175,6 +175,8 @@ export function EditProfileForm({ user }: EditProfileFormProps) {
                   <Select
                     value={field.value || '_none'}
                     onValueChange={(v) => field.onChange(v === '_none' ? '' : v)}
+                    // uniauth mode: the university comes from the unicorp account at sign-in.
+                    disabled={isUniauthMode}
                   >
                     <SelectTrigger className="w-full min-w-0">
                       <SelectValue placeholder="None" />
@@ -196,6 +198,9 @@ export function EditProfileForm({ user }: EditProfileFormProps) {
                     </SelectContent>
                   </Select>
                 </FormControl>
+                {isUniauthMode && (
+                  <p className="text-xs text-text-muted">Set on your unicorp account.</p>
+                )}
                 <FormMessage className="text-xs" />
               </FormItem>
             )}
