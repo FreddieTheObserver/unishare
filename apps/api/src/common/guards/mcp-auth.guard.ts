@@ -4,13 +4,21 @@ import { fromNodeHeaders } from 'better-auth/node'
 import type { Request, Response } from 'express'
 import { auth } from '@/auth/auth.config'
 import type { McpAuthSession } from '@/modules/mcp/dto/mcp-auth-session.dto'
+import {
+  bearerToken,
+  mcpAuthIssuer,
+  mcpResource,
+  verifyMcpAccessToken,
+} from '@/modules/mcp/mcp-token.verifier'
 
 export interface RequestWithMcpSession extends Request {
   mcpSession?: McpAuthSession
 }
 
 /**
- * Fetches the MCP OAuth session and attaches it to the request.
+ * Fetches the MCP OAuth session and attaches it to the request. With MCP_AUTH_ISSUER
+ * set the bearer token is a uniauth JWT verified locally; otherwise it goes through
+ * unishare's own Better Auth mcp() plugin.
  *
  * McpController uses @OptionalAuth() and manages its own auth — Better Auth's MCP plugin is
  * a separate OAuth token flow from the cookie session every other route relies on. A request
@@ -26,15 +34,17 @@ export class McpAuthGuard implements CanActivate {
     const req = context.switchToHttp().getRequest<RequestWithMcpSession>()
     const res = context.switchToHttp().getResponse<Response>()
 
-    const session = await auth.api.getMcpSession({ headers: fromNodeHeaders(req.headers) })
+    const session = mcpAuthIssuer
+      ? await verifyMcpAccessToken(bearerToken(req.headers.authorization) ?? '')
+      : await auth.api.getMcpSession({ headers: fromNodeHeaders(req.headers) })
     if (!session) {
-      const authURL = this.config.get<string>('BETTER_AUTH_URL') ?? 'http://localhost:3001'
+      // uniauth mode: metadata lives next to the resource (RFC 9728 path-suffixed form).
+      const metadataURL = mcpAuthIssuer
+        ? `${new URL(mcpResource).origin}/.well-known/oauth-protected-resource/mcp`
+        : `${this.config.get<string>('BETTER_AUTH_URL') ?? 'http://localhost:3001'}/.well-known/oauth-protected-resource`
       res
         .status(401)
-        .set(
-          'WWW-Authenticate',
-          `Bearer resource_metadata="${authURL}/.well-known/oauth-protected-resource"`,
-        )
+        .set('WWW-Authenticate', `Bearer resource_metadata="${metadataURL}"`)
         .set('Access-Control-Expose-Headers', 'WWW-Authenticate')
         .json({
           jsonrpc: '2.0',

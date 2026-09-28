@@ -30,7 +30,7 @@ const trustedOrigins = [
   ...(process.env.FRONTEND_URL ? [process.env.FRONTEND_URL] : []),
 ]
 
-const mcpScopes = [
+export const mcpScopes = [
   'openid',
   'profile',
   'email',
