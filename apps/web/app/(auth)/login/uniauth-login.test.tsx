@@ -45,6 +45,8 @@ describe('login page in uniauth mode', () => {
       errorCallbackURL: `${window.location.origin}/auth/return`,
       additionalData: { prompt: 'none' },
     })
+    // login_required must come back to this page (not to /profile as a guest).
+    expect(sessionStorage.getItem('unishare:uniauth-return-to')).toBe(window.location.href)
     expect(screen.queryByRole('button', { name: 'Continue' })).toBeNull()
   })
 

@@ -44,14 +44,17 @@ export function takeReturnTo(): string | null {
  */
 export async function signInWithUniauth({
   returnTo,
+  errorReturnTo,
   silent = false,
 }: {
   returnTo: string
+  /** Where to land when uniauth says no (e.g. login_required); defaults to returnTo. */
+  errorReturnTo?: string
   silent?: boolean
 }) {
   markSilentChecked()
   try {
-    sessionStorage.setItem(RETURN_KEY, returnTo)
+    sessionStorage.setItem(RETURN_KEY, errorReturnTo ?? returnTo)
   } catch {
     // Without storage an error just lands on /feed.
   }
