@@ -28,15 +28,16 @@ export function UniauthLogin() {
   const error = params.get('error')
   // Someone signed in on another app reaches a protected page signed out here: check
   // uniauth silently first and only show the button if they aren't signed in there.
-  const [checking, setChecking] = useState(!error)
+  // Decided once on mount (GuestGuard renders this page client-side only, so document exists).
+  const [checking, setChecking] = useState(() => !error && !silentCheckDone())
   const [loading, setLoading] = useState(false)
 
   useEffect(() => {
-    if (error || silentCheckDone()) return setChecking(false)
+    if (!checking) return
     signInWithUniauth({ returnTo: `${window.location.origin}${next}`, silent: true }).catch(() =>
       setChecking(false),
     )
-  }, [error, next])
+  }, [checking, next])
   const message =
     error && error !== 'login_required'
       ? (errorMessages[error] ?? 'Sign-in failed. Please try again.')
