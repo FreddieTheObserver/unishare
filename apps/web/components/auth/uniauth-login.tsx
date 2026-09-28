@@ -34,9 +34,13 @@ export function UniauthLogin() {
 
   useEffect(() => {
     if (!checking) return
-    signInWithUniauth({ returnTo: `${window.location.origin}${next}`, silent: true }).catch(() =>
-      setChecking(false),
-    )
+    // Signed in elsewhere → straight to `next`. Not signed in → back to this page, where the
+    // button now shows (the check is remembered), instead of bouncing to `next` as a guest.
+    signInWithUniauth({
+      returnTo: `${window.location.origin}${next}`,
+      errorReturnTo: window.location.href,
+      silent: true,
+    }).catch(() => setChecking(false))
   }, [checking, next])
   const message =
     error && error !== 'login_required'
