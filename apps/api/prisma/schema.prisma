@@ -73,11 +73,13 @@ model Department {
 }
 
 model University {
-  id        String  @id @default(cuid())
-  name      String  @unique
-  shortName String
-  logoUrl   String?
-  users     User[]
+  id           String  @id @default(cuid())
+  name         String  @unique
+  shortName    String
+  logoUrl      String?
+  /// uniauth organization this university is linked to (memberships live in uniauth)
+  uniauthOrgId String? @unique
+  users        User[]
 
   @@map("university")
 }

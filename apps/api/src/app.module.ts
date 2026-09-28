@@ -33,6 +33,7 @@ import { FeedbackModule } from './modules/feedback/feedback.module'
 import { QuizzesModule } from './modules/quizzes/quizzes.module'
 import { ExamsModule } from './modules/exams/exams.module'
 import { UniversitiesModule } from './modules/universities/universities.module'
+import { UniauthModule } from './modules/uniauth/uniauth.module'
 import { RedisThrottlerStorageModule } from './common/redis-throttler-storage.module'
 import { RedisThrottlerStorageService } from './common/redis-throttler-storage.service'
 import { PrometheusModule } from '@willsoto/nestjs-prometheus'
@@ -112,6 +113,7 @@ import { DecksModule } from './modules/decks/decks.module'
     DecksModule,
     ExamsModule,
     UniversitiesModule,
+    UniauthModule,
     McpModule,
   ],
   controllers: [AppController],

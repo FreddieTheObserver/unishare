@@ -19,7 +19,7 @@ import {
 import { cn } from '@/lib/utils'
 import { useUIStore } from '@/lib/store'
 import { UserAvatar } from '@/components/shared/user-avatar'
-import { authClient } from '@/src/lib/auth/client'
+import { signOut } from '@/src/lib/auth/sign-out'
 import { useAuth } from '@/contexts/auth-context'
 import { FeedbackDialog } from '@/components/feedback/feedback-dialog'
 import { useUnreadChatCount } from '@/hooks/use-unread-chat-count'
@@ -159,8 +159,7 @@ export function AppRail() {
   const groups = buildVisibleNavigation(isAuthenticated, user?.role)
 
   async function handleSignOut() {
-    await authClient.signOut()
-    router.replace('/login')
+    await signOut(router)
   }
 
   return (

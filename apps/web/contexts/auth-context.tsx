@@ -10,6 +10,8 @@ import {
 import type { UserProfileEntity } from '@/src/lib/api/generated/unishareAPI.schemas'
 import { generateKeyPair, exportPublicKey, isEcPublicKey } from '@/src/lib/crypto'
 import { getPrivateKey, storePrivateKey } from '@/src/lib/indexeddb'
+import { isUniauthMode } from '@/src/lib/auth/mode'
+import { signInWithUniauth, silentCheckDone } from '@/src/lib/auth/uniauth'
 
 type Session = NonNullable<ReturnType<typeof authClient.useSession>['data']>
 
@@ -63,6 +65,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     init().catch(console.error)
   }, [user, queryClient])
+
+  // uniauth mode: a signed-out visitor who is already signed in to uniauth (from another app)
+  // is signed in here too — one invisible prompt=none round-trip per browser session.
+  useEffect(() => {
+    if (!isUniauthMode || sessionPending || session || silentCheckDone()) return
+    if (window.location.pathname.startsWith('/login')) return
+    signInWithUniauth({ returnTo: window.location.href, silent: true }).catch(console.error)
+  }, [session, sessionPending])
 
   const isLoading = sessionPending || (!!session?.user && userPending)
   const isAuthenticated = !!session?.user

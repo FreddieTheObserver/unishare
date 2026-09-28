@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { Suspense, useState } from 'react'
 import Image from 'next/image'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
@@ -8,6 +8,8 @@ import { useForm, useWatch } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
 import { authClient } from '@/src/lib/auth/client'
+import { isUniauthMode } from '@/src/lib/auth/mode'
+import { UniauthLogin } from '@/components/auth/uniauth-login'
 import { useUniversitiesControllerFindAll } from '@/src/lib/api/generated/universities/universities'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -77,7 +79,7 @@ const signUpSchema = z
 type SignInValues = z.infer<typeof signInSchema>
 type SignUpValues = z.infer<typeof signUpSchema>
 
-export default function LoginPage() {
+function LegacyLoginPage() {
   const router = useRouter()
   const [mode, setMode] = useState<'signin' | 'signup'>('signin')
   const [serverError, setServerError] = useState('')
@@ -404,5 +406,17 @@ export default function LoginPage() {
         </div>
       </div>
     </div>
+  )
+}
+
+// AUTH_MODE=uniauth: sign-in happens on uniauth; this page only starts it (and offers guest).
+export default function LoginPage() {
+  return isUniauthMode ? (
+    // UniauthLogin reads ?error= with useSearchParams, which needs a Suspense boundary.
+    <Suspense>
+      <UniauthLogin />
+    </Suspense>
+  ) : (
+    <LegacyLoginPage />
   )
 }
