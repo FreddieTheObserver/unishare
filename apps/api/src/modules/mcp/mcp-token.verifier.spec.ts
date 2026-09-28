@@ -94,4 +94,16 @@ describe('mcp-token.verifier', () => {
     expect(bearerToken('Basic abc')).toBeNull()
     expect(bearerToken(undefined)).toBeNull()
   })
+
+  it('maps a uniauth user id to the unishare user through the account row', async () => {
+    const { resolveLocalUserId } = loadVerifier({})
+    const findFirst = jest.fn().mockResolvedValue({ userId: 'local-1' })
+    await expect(resolveLocalUserId({ account: { findFirst } }, 'ua_1')).resolves.toBe('local-1')
+    expect(findFirst).toHaveBeenCalledWith({
+      where: { providerId: 'uniauth', accountId: 'ua_1' },
+      select: { userId: true },
+    })
+    findFirst.mockResolvedValue(null)
+    await expect(resolveLocalUserId({ account: { findFirst } }, 'ua_2')).resolves.toBeNull()
+  })
 })

@@ -6,9 +6,16 @@ import type { McpAuthSession } from './dto/mcp-auth-session.dto'
  * JWKS; unishare's own Better Auth mcp() plugin is bypassed. Unset keeps the
  * legacy in-process flow (removed once unishare's auth moves to uniauth).
  *
- * e.g. MCP_AUTH_ISSUER=https://auth.psstee.dev/api/auth
+ * e.g. MCP_AUTH_ISSUER=https://auth.psstee.dev/api/auth (defaults to UNIAUTH_ISSUER when
+ * AUTH_MODE=uniauth).
+ *
+ * The session's userId is the token's `sub` — a **uniauth** user id. Callers map it to the
+ * local user with resolveLocalUserId before touching unishare data.
  */
-export const mcpAuthIssuer = process.env.MCP_AUTH_ISSUER || undefined
+export const mcpAuthIssuer =
+  process.env.MCP_AUTH_ISSUER ||
+  (process.env.AUTH_MODE === 'uniauth' ? process.env.UNIAUTH_ISSUER : undefined) ||
+  undefined
 
 /** Canonical MCP resource URL — the audience uniauth binds tokens to. */
 export const mcpResource = `${process.env.FRONTEND_URL ?? 'http://localhost:3000'}/mcp`
@@ -44,4 +51,21 @@ export function protectedResourceMetadata(scopes: string[]) {
     scopes_supported: scopes,
     bearer_methods_supported: ['header'],
   }
+}
+
+/**
+ * uniauth user id → unishare user id, via the account row Better Auth writes at OIDC sign-in
+ * (providerId 'uniauth', accountId = uniauth id). Users imported from unishare keep the same
+ * id and get that row too, so there is one rule. Null when the person has never signed in to
+ * unishare.
+ */
+export async function resolveLocalUserId(
+  prisma: { account: { findFirst: (args: object) => Promise<{ userId: string } | null> } },
+  uniauthUserId: string,
+): Promise<string | null> {
+  const account = await prisma.account.findFirst({
+    where: { providerId: 'uniauth', accountId: uniauthUserId },
+    select: { userId: true },
+  })
+  return account?.userId ?? null
 }

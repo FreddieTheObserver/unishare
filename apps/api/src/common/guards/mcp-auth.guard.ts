@@ -3,11 +3,13 @@ import { ConfigService } from '@nestjs/config'
 import { fromNodeHeaders } from 'better-auth/node'
 import type { Request, Response } from 'express'
 import { auth } from '@/auth/auth.config'
+import { PrismaService } from '@/prisma/prisma.service'
 import type { McpAuthSession } from '@/modules/mcp/dto/mcp-auth-session.dto'
 import {
   bearerToken,
   mcpAuthIssuer,
   mcpResource,
+  resolveLocalUserId,
   verifyMcpAccessToken,
 } from '@/modules/mcp/mcp-token.verifier'
 
@@ -28,14 +30,17 @@ export interface RequestWithMcpSession extends Request {
  */
 @Injectable()
 export class McpAuthGuard implements CanActivate {
-  constructor(private readonly config: ConfigService) {}
+  constructor(
+    private readonly config: ConfigService,
+    private readonly prisma: PrismaService,
+  ) {}
 
   async canActivate(context: ExecutionContext): Promise<boolean> {
     const req = context.switchToHttp().getRequest<RequestWithMcpSession>()
     const res = context.switchToHttp().getResponse<Response>()
 
     const session = mcpAuthIssuer
-      ? await verifyMcpAccessToken(bearerToken(req.headers.authorization) ?? '')
+      ? await this.uniauthSession(bearerToken(req.headers.authorization) ?? '')
       : await auth.api.getMcpSession({ headers: fromNodeHeaders(req.headers) })
     if (!session) {
       // uniauth mode: metadata lives next to the resource (RFC 9728 path-suffixed form).
@@ -56,5 +61,13 @@ export class McpAuthGuard implements CanActivate {
 
     req.mcpSession = session
     return true
+  }
+
+  /** Valid uniauth token → session for the matching unishare user (null if they have none). */
+  private async uniauthSession(token: string): Promise<McpAuthSession | null> {
+    const verified = await verifyMcpAccessToken(token)
+    if (!verified) return null
+    const userId = await resolveLocalUserId(this.prisma, verified.userId)
+    return userId ? { ...verified, userId } : null
   }
 }
