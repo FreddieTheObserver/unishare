@@ -1,4 +1,5 @@
 import Image from 'next/image'
+import { isRenderableImage } from '@/lib/image-hosts'
 import { cn } from '@/lib/utils'
 
 const sizeClasses = {
@@ -36,7 +37,8 @@ export function UserAvatar({ name, image, size, className, priority }: UserAvata
         className,
       )}
     >
-      {image ? (
+      {/* Unlisted hosts would throw in next/image; show initials instead. */}
+      {image && isRenderableImage(image) ? (
         <Image
           src={image}
           alt={name}
