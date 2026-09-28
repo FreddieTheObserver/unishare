@@ -2,7 +2,41 @@
 
 Supersedes the shared-cookie design in `planning.md` (phase 4 as built on `feat/uniauth`).
 
-Status: **approved 2026-09-28; in progress.**
+Status: **implemented on `feat/uniauth` and verified locally (2026-09-28); not merged.**
+
+## Verified locally (uniauth :3002, unishare API :3001, DB `unishare_uniauth`)
+
+- Silent check signed out → `login_required` → `/auth/return` → back to the page as a guest.
+- Silent check signed in at uniauth → code → unishare session, linked to the existing user
+  (same id, role kept); KMUTT member mapped from the organizations claim; a brand-new uniauth
+  user gets a new local user.
+- Rename at uniauth → shows in unishare at the next sign-in.
+- Sign-out → unishare and uniauth sessions both end, no confirmation page (id_token_hint).
+- MCP: uniauth token for a user whose local id differs from their uniauth id → resolved via
+  the account row, tools listed.
+- Ban (unishare admin plugin) → sign-in refused (`BANNED_USER` explained on /login); unban
+  restores it.
+- Legacy mode: sign-up, profile edits, own MCP discovery unchanged; uniauth routes absent.
+
+Not verified end to end: **back-channel logout** — uniauth only accepts https
+`backchannel_logout_uri`s, so the local client has none; the endpoint is covered by unit tests
+with signed logout tokens. The web pages were not viewed in a browser (component tests only).
+
+## Found while building
+
+- **Cookie name collision:** apps run Better Auth too (`better-auth.session_token`), and
+  unishare's cookie is on the parent domain in production, so uniauth now uses the `uniauth`
+  prefix.
+- **genericOAuth (1.6) error routing:** provider errors skip the sign-in's
+  `errorCallbackURL`; `onAPIError.errorURL` points at the web's `/auth/return` instead.
+- **Local clients:** web OAuth clients must use https redirect URIs, so local development
+  registers a native client (`create-client.ts --local`).
+- **Existing users need their `account` row before cutover:** without it, a password user
+  whose uniauth email is unverified gets `account_not_linked` instead of being attached to
+  their unishare account (the safe default — linking on an unverified email would let anyone
+  claim an account). The phase 5 import must create these rows.
+- **Pre-existing:** unishare's own session cookie is still set on `.psstee.dev` in production
+  (`crossSubDomainCookies`). Serving Better Auth from the web origin would make it host-only.
 
 ## Why the change
 
