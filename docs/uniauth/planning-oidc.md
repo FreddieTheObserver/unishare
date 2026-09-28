@@ -1,0 +1,147 @@
+# unishare → uniauth, revision 2: central login + OAuth session per app
+
+Supersedes the shared-cookie design in `planning.md` (phase 4 as built on `feat/uniauth`).
+
+Status: **approved 2026-09-28; in progress.**
+
+## Why the change
+
+The shared-cookie design sends the uniauth session cookie to every `*.psstee.dev` host —
+including third-party presenton (`decks`), argocd, grafana and user-uploaded content on
+`s3.psstee.dev`. Any of those servers receives every user's session on every request, and a
+subdomain serving uploaded HTML can plant cookies. Revision 2 keeps the central login pages
+(one place users type passwords) and gives each app its **own** session, obtained through
+OAuth 2.1 / OIDC from uniauth — the standard SSO shape (Google, Microsoft, Auth0).
+
+## How it works
+
+```
+share.psstee.dev (unishare)            auth.psstee.dev (uniauth)
+───────────────────────────            ─────────────────────────
+no local session
+  └─ redirect ── /oauth2/authorize ──▶ signed in here?
+                 (prompt=none first)     ├─ yes → code, instantly (no page shown)
+                                         └─ no  → login_required → unishare shows guest view;
+                                                  "Sign in" → uniauth /login (central page)
+◀── /api/auth/oauth2/callback/uniauth ─ code
+exchange code → id_token (sub, email, name, picture, organizations)
+create/link local User, set unishare's OWN session cookie (host-only)
+```
+
+- **Instant sign-in:** on a first visit without a local session, the web app makes one silent
+  `prompt=none` round-trip (~200–500 ms). Signed in at uniauth → signed in to unishare with
+  no page shown. Not signed in → `login_required` comes back and the visitor stays a guest; the
+  attempt is remembered for the browser session so it isn't retried on every page.
+- **Cookies:** uniauth's cookie is host-only on `auth.psstee.dev` (`COOKIE_DOMAIN` unset).
+  unishare's stays on its own host. No cookie is shared across subdomains.
+- **Trusted clients:** unishare and unigym are confidential OAuth clients registered with
+  `skip_consent`. MCP clients keep dynamic registration + consent (phase 3, unchanged).
+
+## What unishare keeps
+
+unishare keeps Better Auth **as its session layer**, switched from "identity provider" to
+"OIDC client":
+
+- `genericOAuth` provider `uniauth` (discovery URL, client id/secret, PKCE).
+- Email/password and the Google/Microsoft providers are **turned off** in uniauth mode:
+  passwords and social logins live only in uniauth.
+- Sessions, `@Session()` / `@Roles()`, the global guard, both socket gateways, `proxy.ts` and
+  the `admin` plugin (roles, bans — they revoke unishare sessions) work exactly as today.
+- Guests stay **local to unishare** (its `anonymous` plugin), as in the original decision.
+- MCP (phase 3) stays: tokens verified against uniauth's JWKS.
+
+## Identity mapping
+
+Better Auth drops the provider's `id` when it creates a user from an OAuth sign-in, so the link
+is the `account` row it writes: `providerId = 'uniauth'`, `accountId = <uniauth user id>`.
+
+- **Existing users:** the phase 5 import copies them to uniauth with the **same id** and
+  inserts that `account` row in unishare, so they land on their existing profile.
+- **New users:** a new local id, linked by the `account` row.
+- **MCP:** the verifier resolves `sub` → local user through the same row (today it assumes
+  `sub` is the local id).
+- **Universities:** uniauth adds `organizations: [{ id, verified }]` to the ID token and
+  userinfo; unishare maps it through `University.uniauthOrgId` on sign-in.
+
+## Account actions move to uniauth
+
+Password change, set-password, linked Google/Microsoft accounts and "delete my account"
+become a small **account page on uniauth** (`auth.psstee.dev/account`), shared by every app.
+unishare's profile page links there for security settings and keeps what is unishare's
+(bio, department, E2EE keys, "delete my unishare data").
+
+## Sign-out
+
+- **Sign out** in unishare: end the unishare session, then RP-initiated logout at uniauth's
+  `end_session_endpoint`, which ends the uniauth session and returns to unishare.
+- **Other apps:** uniauth's **back-channel logout** notifies each client's
+  `backchannel_logout_uri`; unishare gets a small endpoint that verifies the logout token and
+  revokes that user's unishare sessions. Without it, other apps stay signed in until their own
+  session expires.
+
+## Changes
+
+### uniauth
+
+| File                                   | Change                                                                                                                                   |
+| -------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------- |
+| `apps/server/src/auth/auth.ts`         | `organizations` in ID token/userinfo (`customIdTokenClaims` / `customUserInfoClaims`); drop `customSession`; host-only cookie by default |
+| `apps/server/scripts/create-client.ts` | **new**: register a trusted app (confidential, `skip_consent`, back-channel URI) with an admin session                                   |
+| `apps/web/src/pages/account.tsx`       | **new**: change/set password, linked accounts, sign out everywhere, delete account                                                       |
+| `apps/web/src/pages/login.tsx`         | "already signed in" shortcut only for non-OAuth visits (OAuth continues via the signed query)                                            |
+| `packages/sdk`                         | unchanged and unused by unishare (published 0.1.0 stays)                                                                                 |
+
+### unishare — reverted from `feat/uniauth` (shared-cookie design)
+
+`UniauthGuard`, `AuthSessionService` / `AuthSessionModule` (and its body parsers), the SDK
+dependency, the gateway + collab refactor, the admin routes in the users module, the web
+admin/danger-zone/sign-out/proxy changes, and `auth-mode.ts` in its current form.
+
+The branch is local and unpushed, so it is rebuilt from `9633ee31` (MCP verifier +
+`uniauthOrgId`), keeping the old tip as tag `archive/uniauth-shared-cookie`.
+
+### unishare — new
+
+| File                                                         | Change                                                                                                                       |
+| ------------------------------------------------------------ | ---------------------------------------------------------------------------------------------------------------------------- |
+| `apps/api/src/auth/auth.config.ts`                           | uniauth mode: `genericOAuth` provider, email/password + social off, account linking to `uniauth` by the `account` row        |
+| `apps/api/src/auth/uniauth-sign-in.ts`                       | **new**: map ID token → local user (name/email/image first time, university from `organizations`, `consentGivenAt`)          |
+| `apps/api/src/modules/auth/backchannel-logout.controller.ts` | **new**: verify logout token (uniauth JWKS), revoke the user's sessions                                                      |
+| `apps/api/src/modules/mcp/mcp-token.verifier.ts`             | `sub` → local user via `account` row                                                                                         |
+| `apps/web/src/lib/auth/client.ts`                            | `genericOAuthClient`                                                                                                         |
+| `apps/web/app/(auth)/login/page.tsx`                         | uniauth mode: "Continue" → `signIn.oauth2({ providerId: 'uniauth' })`; guest link stays                                      |
+| `apps/web/components/silent-sign-in.tsx`                     | **new**: one `prompt=none` attempt per browser session when signed out                                                       |
+| profile / sign-out components                                | security settings link to uniauth `/account`; sign-out → local + end-session                                                 |
+| env                                                          | `AUTH_MODE`, `UNIAUTH_ISSUER`, `UNIAUTH_CLIENT_ID`, `UNIAUTH_CLIENT_SECRET` (API); `NEXT_PUBLIC_AUTH_MODE` (web, build-time) |
+
+No controller changes. No schema change beyond `uniauthOrgId` (already committed).
+
+## Steps
+
+1. Rebuild the branch from `9633ee31`; archive tag for the old tip. ~10m
+2. uniauth: organizations claim, host-only cookie, `create-client` script. ~1h
+3. uniauth: `/account` page. ~3h
+4. unishare API: `genericOAuth` in uniauth mode, sign-in mapping, MCP `sub` lookup, specs. ~3h
+5. unishare API: back-channel logout endpoint + spec. ~1.5h
+6. unishare web: login, silent sign-in, sign-out, profile links. ~2h
+7. Local end-to-end in both modes: password, guest, silent SSO across two clients, logout
+   propagation, ban, MCP. ~2h
+
+Total: about 1½–2 days (less than the shared-cookie phase 4, because unishare's session layer
+stays).
+
+## Trade-offs
+
+- **One redirect** on first visit instead of none. Invisible to users (no page renders).
+- **Logout across apps** depends on back-channel delivery; if unishare is down when a user signs
+  out elsewhere, its session lives until expiry (7 days) — same as any OIDC SSO.
+- **Profile edits:** name and avatar are **always synced from uniauth** (`overrideUserInfo`)
+  on every sign-in, and edited only on uniauth's `/account` page. unishare's profile form keeps
+  bio/department and links to uniauth for name/avatar; its API ignores name/image in uniauth
+  mode. An edit in uniauth shows in unishare at that app's next sign-in.
+
+## Decisions
+
+1. Name/avatar: always synced from uniauth (edited on uniauth `/account`).
+2. Silent `prompt=none` sign-in on the first visit of a browser session.
+3. `feat/uniauth` rebuilt from `9633ee31`; old tip kept as tag `archive/uniauth-shared-cookie`.
