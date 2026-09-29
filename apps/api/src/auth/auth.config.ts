@@ -1,12 +1,12 @@
 import { betterAuth } from 'better-auth'
 import { prismaAdapter } from 'better-auth/adapters/prisma'
-import { openAPI, admin, anonymous, mcp, genericOAuth } from 'better-auth/plugins'
+import { openAPI, admin, anonymous, genericOAuth } from 'better-auth/plugins'
 import { generateGuestDisplayName } from './guest-display-name'
 import { ac, roles } from '../lib/permissions'
 import { UserRole } from '../generated/prisma/client'
 import { PrismaClient } from '../generated/prisma/client'
 import { PrismaPg } from '@prisma/adapter-pg'
-import { isUniauthMode, uniauthConfig, UNIAUTH_PROVIDER_ID } from './auth-mode'
+import { uniauthConfig, UNIAUTH_PROVIDER_ID } from './uniauth-config'
 import { mapUniauthProfile } from './uniauth-sign-in'
 
 const isProduction = process.env.NODE_ENV === 'production'
@@ -32,89 +32,51 @@ const trustedOrigins = [
   ...(process.env.FRONTEND_URL ? [process.env.FRONTEND_URL] : []),
 ]
 
-export const mcpScopes = [
-  'openid',
-  'profile',
-  'email',
-  'offline_access',
-  'boards:read',
-  'boards:write',
-  'posts:read',
-  'posts:write',
-  'courses:read',
-]
-
 export const auth = betterAuth({
   baseURL: process.env.BETTER_AUTH_URL,
   secret: process.env.BETTER_AUTH_SECRET,
   // genericOAuth (1.6) sends provider errors — including login_required from the silent
   // prompt=none check — here before reading the sign-in's errorCallbackURL. The web page
   // sends login_required back to where the visitor was and other errors to /login.
-  ...(isUniauthMode && {
-    onAPIError: {
-      errorURL: `${process.env.FRONTEND_URL ?? 'http://localhost:3000'}/auth/return`,
-    },
-  }),
+  onAPIError: {
+    errorURL: `${process.env.FRONTEND_URL ?? 'http://localhost:3000'}/auth/return`,
+  },
   advanced: {
-    crossSubDomainCookies: {
-      enabled: isProduction,
-      domain: process.env.COOKIE_DOMAIN,
-    },
+    // Host-only cookies on the web origin (BETTER_AUTH_URL is the web app, which proxies
+    // /api to the API), so no other *.psstee.dev app ever receives unishare's session.
+    // The prefix renamed them when they stopped being set on .psstee.dev: browsers still
+    // holding the old domain-wide cookies simply don't send a name unishare reads.
+    cookiePrefix: 'unishare',
   },
   database: prismaAdapter(prisma, {
     provider: 'postgresql',
   }),
-  // uniauth mode: passwords and Google/Microsoft live only in uniauth; unishare signs users
-  // in through the `uniauth` OIDC provider below and keeps just its own session.
-  emailAndPassword: {
-    enabled: !isUniauthMode,
-  },
-  account: {
-    accountLinking: {
-      allowDifferentEmails: true,
-    },
-  },
-  socialProviders: isUniauthMode
-    ? {}
-    : {
-        microsoft: {
-          clientId: process.env.MICROSOFT_CLIENT_ID as string,
-          clientSecret: process.env.MICROSOFT_CLIENT_SECRET as string,
-          tenantId: process.env.MICROSOFT_TENANT_ID ?? 'common',
-        },
-        google: {
-          clientId: process.env.GOOGLE_CLIENT_ID as string,
-          clientSecret: process.env.GOOGLE_CLIENT_SECRET as string,
-        },
-      },
+  // Passwords and Google/Microsoft live only in uniauth: unishare signs users in through the
+  // `uniauth` OIDC provider below and keeps just its own session.
   plugins: [
-    ...(uniauthConfig
-      ? [
-          genericOAuth({
-            config: [
-              {
-                providerId: UNIAUTH_PROVIDER_ID,
-                discoveryUrl: `${uniauthConfig.issuer}/.well-known/openid-configuration`,
-                clientId: uniauthConfig.clientId,
-                clientSecret: uniauthConfig.clientSecret,
-                authentication: 'basic',
-                pkce: true,
-                scopes: ['openid', 'profile', 'email', 'offline_access'],
-                // Name, avatar and university are uniauth's: refreshed on every sign-in.
-                overrideUserInfo: true,
-                mapProfileToUser: mapUniauthProfile(prisma),
-                // The web app's silent check signs in with additionalData.prompt = 'none':
-                // uniauth answers instantly (signed in) or with login_required.
-                authorizationUrlParams: (ctx): Record<string, string> =>
-                  (ctx.body as { additionalData?: { prompt?: string } } | undefined)?.additionalData
-                    ?.prompt === 'none'
-                    ? { prompt: 'none' }
-                    : {},
-              },
-            ],
-          }),
-        ]
-      : []),
+    genericOAuth({
+      config: [
+        {
+          providerId: UNIAUTH_PROVIDER_ID,
+          discoveryUrl: `${uniauthConfig.issuer}/.well-known/openid-configuration`,
+          clientId: uniauthConfig.clientId,
+          clientSecret: uniauthConfig.clientSecret,
+          authentication: 'basic',
+          pkce: true,
+          scopes: ['openid', 'profile', 'email', 'offline_access'],
+          // Name, avatar and university are uniauth's: refreshed on every sign-in.
+          overrideUserInfo: true,
+          mapProfileToUser: mapUniauthProfile(prisma),
+          // The web app's silent check signs in with additionalData.prompt = 'none':
+          // uniauth answers instantly (signed in) or with login_required.
+          authorizationUrlParams: (ctx): Record<string, string> =>
+            (ctx.body as { additionalData?: { prompt?: string } } | undefined)?.additionalData
+              ?.prompt === 'none'
+              ? { prompt: 'none' }
+              : {},
+        },
+      ],
+    }),
     admin({
       ac,
       roles,
@@ -125,24 +87,6 @@ export const auth = betterAuth({
       emailDomainName: 'guest.unishare.app',
       generateName: () => generateGuestDisplayName(),
     }),
-    // In uniauth mode uniauth is the MCP authorization server (see mcp-token.verifier.ts).
-    ...(isMcpEnabled && !isUniauthMode
-      ? [
-          mcp({
-            loginPage: `${process.env.FRONTEND_URL ?? 'http://localhost:3000'}/login`,
-            resource: `${process.env.FRONTEND_URL ?? 'http://localhost:3000'}/mcp`,
-            // Better Auth 1.6 reads provider metadata from the top level at runtime.
-            metadata: { scopes_supported: mcpScopes },
-            oidcConfig: {
-              loginPage: `${process.env.FRONTEND_URL ?? 'http://localhost:3000'}/login`,
-              scopes: ['boards:read', 'boards:write', 'posts:read', 'posts:write', 'courses:read'],
-              metadata: { scopes_supported: mcpScopes },
-              allowPlainCodeChallengeMethod: false,
-              allowDynamicClientRegistration: true,
-            },
-          } as Parameters<typeof mcp>[0] & { metadata: { scopes_supported: string[] } }),
-        ]
-      : []),
     ...(isProduction ? [] : [openAPI()]),
   ],
   trustedOrigins,
@@ -199,10 +143,11 @@ export const auth = betterAuth({
   databaseHooks: {
     user: {
       create: {
-        // Consent timestamp is always set server-side for all signup flows
-        // (both OAuth and email/password). This ensures it's never missing.
+        // Guests accept the terms by continuing as a guest. Everyone else accepts them on
+        // unishare's own consent screen (POST /users/me/consent): signing up on another app
+        // (unigym) and arriving here through single sign-on is not agreeing to unishare's.
         after: async (user) => {
-          if (!user.consentGivenAt) {
+          if ((user as { isAnonymous?: boolean }).isAnonymous && !user.consentGivenAt) {
             await prisma.user.update({
               where: { id: user.id },
               data: { consentGivenAt: new Date() },

@@ -1,26 +1,11 @@
-import {
-  BadRequestException,
-  Body,
-  Controller,
-  Delete,
-  Get,
-  Param,
-  Patch,
-  Post,
-  Req,
-} from '@nestjs/common'
+import { Body, Controller, Delete, Get, HttpCode, Param, Patch, Post } from '@nestjs/common'
 import { ApiOkResponse, ApiTags } from '@nestjs/swagger'
 import { OptionalAuth, Roles, Session } from '@thallesp/nestjs-better-auth'
 import type { UserSession } from '@thallesp/nestjs-better-auth'
-import type { Request } from 'express'
-import { fromNodeHeaders } from 'better-auth/node'
 import { ResponseMessage } from '@/common/decorators/response-message.decorator'
-import { auth } from '@/auth/auth.config'
-import { isUniauthMode } from '@/auth/auth-mode'
 import { UsersService } from './users.service'
 import { UpdateProfileDto } from './dto/update-profile.dto'
 import { UpdateAcademicProfileDto } from './dto/update-academic-profile.dto'
-import { SetPasswordDto } from './dto/set-password.dto'
 import { UpdatePublicKeyDto } from './dto/update-public-key.dto'
 import { UpdateKeyBackupDto } from './dto/update-key-backup.dto'
 import { UserProfileEntity } from './entities/user-profile.entity'
@@ -43,22 +28,12 @@ export class UsersController {
     return this.usersService.exportData(session.user.id)
   }
 
-  @Post('me/set-password')
-  @ResponseMessage('Password set successfully')
-  async setPassword(
-    @Session() session: UserSession,
-    @Req() req: Request,
-    @Body() dto: SetPasswordDto,
-  ) {
-    void session
-    // Passwords live in uniauth in uniauth mode (its /account page), never in unishare.
-    if (isUniauthMode)
-      throw new BadRequestException('Passwords are managed on your uniauth account')
-    const result = await auth.api.setPassword({
-      body: { newPassword: dto.newPassword },
-      headers: fromNodeHeaders(req.headers),
-    })
-    if (!result?.status) throw new BadRequestException('Failed to set password')
+  /** Accepts unishare's Terms and Privacy Policy (the web app asks once, before first use). */
+  @Post('me/consent')
+  @HttpCode(200)
+  @ResponseMessage('Consent recorded')
+  async giveConsent(@Session() session: UserSession) {
+    await this.usersService.giveConsent(session.user.id)
     return null
   }
 

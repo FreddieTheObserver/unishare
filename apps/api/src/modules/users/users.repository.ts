@@ -91,6 +91,13 @@ export class UsersRepository {
     })
   }
 
+  giveConsent(id: string, at: Date) {
+    return this.prisma.user.updateMany({
+      where: { id, consentGivenAt: null },
+      data: { consentGivenAt: at },
+    })
+  }
+
   findDepartmentById(id: string) {
     return this.prisma.department.findUnique({
       where: { id },

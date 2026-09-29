@@ -18,7 +18,7 @@ import { authClient } from '@/src/lib/auth/client'
 import { useUsersControllerClearMyKeys } from '@/src/lib/api/generated/users/users'
 import { clearPrivateKey } from '@/src/lib/indexeddb'
 import { useAuth } from '@/contexts/auth-context'
-import { isUniauthMode, uniauthAccountURL } from '@/src/lib/auth/mode'
+import { uniauthAccountURL } from '@/src/lib/auth/mode'
 import { signOut } from '@/src/lib/auth/sign-out'
 
 export function DangerZoneCard() {
@@ -36,7 +36,7 @@ export function DangerZoneCard() {
       onSuccess: async () => {
         const userId = session?.user?.id
         if (userId) await clearPrivateKey(userId)
-        await signOut(router)
+        await signOut()
       },
       onError: () => setRemoveKeysError('Failed to remove encryption keys. Please try again.'),
     },
@@ -168,21 +168,13 @@ export function DangerZoneCard() {
       {/* Delete account */}
       <div className="flex items-center justify-between">
         <div>
-          <p className="text-sm font-medium text-foreground">
-            {isUniauthMode ? 'Delete my Unishare data' : 'Delete account'}
-          </p>
+          <p className="text-sm font-medium text-foreground">Delete my Unishare data</p>
           <p className="text-xs text-text-muted mt-0.5">
-            {isUniauthMode ? (
-              <>
-                Deletes your Unishare profile and content. Your unicorp account stays; delete it on{' '}
-                <a href={uniauthAccountURL('/')} className="underline hover:text-foreground">
-                  your account page
-                </a>
-                .
-              </>
-            ) : (
-              'Permanently delete your account and all associated data.'
-            )}
+            Deletes your Unishare profile and content. Your unicorp account stays; delete it on{' '}
+            <a href={uniauthAccountURL('/')} className="underline hover:text-foreground">
+              your account page
+            </a>
+            .
           </p>
         </div>
         <AlertDialog open={dialogOpen} onOpenChange={setDialogOpen}>
@@ -195,9 +187,8 @@ export function DangerZoneCard() {
             <AlertDialogHeader>
               <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
               <AlertDialogDescription>
-                {isUniauthMode
-                  ? 'This cannot be undone. Your Unishare profile and everything you posted here will be permanently deleted. Your unicorp account and other apps are not affected.'
-                  : 'This action cannot be undone. Your account and all your data will be permanently deleted.'}
+                This cannot be undone. Your Unishare profile and everything you posted here will be
+                permanently deleted. Your unicorp account and other apps are not affected.
               </AlertDialogDescription>
             </AlertDialogHeader>
             {deleteError && <p className="text-xs text-destructive px-1">{deleteError}</p>}

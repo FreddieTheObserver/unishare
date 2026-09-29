@@ -1,20 +1,13 @@
 import { All, Controller, Get, Logger, Req, Res, UseFilters, UseGuards } from '@nestjs/common'
 import { ApiExcludeController } from '@nestjs/swagger'
 import { OptionalAuth } from '@thallesp/nestjs-better-auth'
-import { fromNodeHeaders } from 'better-auth/node'
-import { oAuthDiscoveryMetadata, oAuthProtectedResourceMetadata } from 'better-auth/plugins'
 import { Throttle } from '@nestjs/throttler'
-import { ConfigService } from '@nestjs/config'
-import type { Request, Response } from 'express'
-import { auth, mcpScopes } from '@/auth/auth.config'
+import type { Response } from 'express'
 import { McpExceptionFilter } from '@/common/filters/mcp-exception.filter'
 import { McpAuthGuard, type RequestWithMcpSession } from '@/common/guards/mcp-auth.guard'
 import { UserThrottlerGuard } from '@/common/guards/user-throttler.guard'
 import { McpService } from './mcp.service'
-import { mcpAuthIssuer, protectedResourceMetadata } from './mcp-token.verifier'
-
-const oauthDiscoveryHandler = oAuthDiscoveryMetadata(auth)
-const protectedResourceHandler = oAuthProtectedResourceMetadata(auth)
+import { protectedResourceMetadata } from './mcp-token.verifier'
 
 @ApiExcludeController()
 @OptionalAuth()
@@ -23,23 +16,13 @@ const protectedResourceHandler = oAuthProtectedResourceMetadata(auth)
 export class McpController {
   private readonly logger = new Logger(McpController.name)
 
-  constructor(
-    private readonly mcpService: McpService,
-    private readonly config: ConfigService,
-  ) {}
+  constructor(private readonly mcpService: McpService) {}
 
-  // uniauth mode: unishare is only the resource server. Clients find the
-  // authorization server through the protected-resource metadata below.
-  @Get('.well-known/oauth-authorization-server')
-  discovery(@Req() req: Request, @Res() res: Response) {
-    if (mcpAuthIssuer) return res.status(404).json({ error: 'not_found' })
-    return this.sendWebResponse(oauthDiscoveryHandler(this.toWebRequest(req)), res)
-  }
-
+  // unishare is only the resource server. Clients find the authorization server (uniauth)
+  // through the protected-resource metadata.
   @Get(['.well-known/oauth-protected-resource', '.well-known/oauth-protected-resource/mcp'])
-  protectedResource(@Req() req: Request, @Res() res: Response) {
-    if (mcpAuthIssuer) return res.json(protectedResourceMetadata(mcpScopes))
-    return this.sendWebResponse(protectedResourceHandler(this.toWebRequest(req)), res)
+  protectedResource(@Res() res: Response) {
+    return res.json(protectedResourceMetadata())
   }
 
   @All('mcp')
@@ -58,22 +41,5 @@ export class McpController {
         })
       }
     }
-  }
-
-  private toWebRequest(req: Request) {
-    const origin =
-      this.config.get<string>('FRONTEND_URL') ??
-      this.config.get<string>('BETTER_AUTH_URL') ??
-      'http://localhost:3000'
-    return new globalThis.Request(new URL(req.originalUrl, origin), {
-      method: req.method,
-      headers: fromNodeHeaders(req.headers),
-    })
-  }
-
-  private async sendWebResponse(responsePromise: Promise<globalThis.Response>, res: Response) {
-    const response = await responsePromise
-    response.headers.forEach((value, name) => res.set(name, value))
-    res.status(response.status).send(await response.text())
   }
 }
