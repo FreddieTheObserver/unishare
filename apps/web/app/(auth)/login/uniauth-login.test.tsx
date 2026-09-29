@@ -4,7 +4,7 @@ import userEvent from '@testing-library/user-event'
 
 const params = { error: null as string | null, next: null as string | null }
 
-vi.mock('@/src/lib/auth/mode', () => ({ isUniauthMode: true, uniauthURL: 'http://auth.test' }))
+vi.mock('@/src/lib/auth/mode', () => ({ uniauthURL: 'http://auth.test' }))
 vi.mock('next/navigation', () => ({
   useRouter: () => ({ replace: vi.fn() }),
   useSearchParams: () => ({
@@ -21,11 +21,11 @@ vi.mock('@/src/lib/auth/client', () => ({
   authClient: { signIn: { oauth2: vi.fn(), social: vi.fn(), email: vi.fn() } },
 }))
 
-// Imported after the mocks so the page sees AUTH_MODE=uniauth.
+// Imported after the mocks.
 const { default: LoginPage } = await import('./page')
 const { authClient } = await import('@/src/lib/auth/client')
 
-describe('login page in uniauth mode', () => {
+describe('login page', () => {
   beforeEach(() => {
     vi.clearAllMocks()
     params.error = null

@@ -2,7 +2,7 @@
 
 import Link from 'next/link'
 import Image from 'next/image'
-import { usePathname, useRouter } from 'next/navigation'
+import { usePathname } from 'next/navigation'
 import {
   BarChart2,
   Bell,
@@ -113,7 +113,6 @@ function DockItem({
 
 export function MobileNav() {
   const pathname = usePathname()
-  const router = useRouter()
   const { isAuthenticated, session } = useAuth()
   const user = session?.user
 
@@ -139,7 +138,7 @@ export function MobileNav() {
   const [feedbackOpen, setFeedbackOpen] = useState(false)
 
   async function handleSignOut() {
-    await signOut(router)
+    await signOut()
   }
 
   return (

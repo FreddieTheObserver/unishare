@@ -7,7 +7,6 @@ import { ChatService } from '../chat/chat.service'
 import { UsersRepository } from './users.repository'
 import { UpdateProfileDto } from './dto/update-profile.dto'
 import { UpdateAcademicProfileDto } from './dto/update-academic-profile.dto'
-import { isUniauthMode } from '@/auth/auth-mode'
 
 @Injectable()
 export class UsersService {
@@ -35,11 +34,15 @@ export class UsersService {
   }
 
   async updateProfile(id: string, dto: UpdateProfileDto) {
-    // uniauth mode: name and avatar are the uniauth identity's, refreshed at every sign-in,
-    // and edited on uniauth's /account page. Only unishare-owned fields change here.
-    const fields = isUniauthMode ? { bio: dto.bio } : dto
-    const user = await this.usersRepository.updateProfile(id, fields)
+    // Name and avatar are the uniauth identity's, refreshed at every sign-in, and edited on
+    // uniauth's /account page. Only unishare-owned fields change here.
+    const user = await this.usersRepository.updateProfile(id, { bio: dto.bio })
     return this.toProfileView(user)
+  }
+
+  /** Records when the user accepted the terms; the first acceptance is the one kept. */
+  async giveConsent(id: string) {
+    await this.usersRepository.giveConsent(id, new Date())
   }
 
   async updatePublicKey(id: string, publicKey: string) {

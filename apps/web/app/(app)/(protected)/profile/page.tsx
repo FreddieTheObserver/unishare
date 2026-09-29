@@ -2,7 +2,6 @@
 
 import { useState } from 'react'
 import { keepPreviousData } from '@tanstack/react-query'
-import { useRouter } from 'next/navigation'
 import { LogOut } from 'lucide-react'
 import { useUsersControllerGetMe } from '@/src/lib/api/generated/users/users'
 import {
@@ -10,15 +9,12 @@ import {
   usePostsControllerGetSavedPosts,
 } from '@/src/lib/api/generated/posts/posts'
 import type { UserProfileEntity } from '@/src/lib/api/generated/unishareAPI.schemas'
-import { authClient } from '@/src/lib/auth/client'
+import { signOut } from '@/src/lib/auth/sign-out'
 import { PageHeader } from '@/components/shared/page-header'
 import { ProfileHeaderCard } from '@/components/profile/profile-header-card'
 import { EditProfileForm } from '@/components/profile/edit-profile-form'
-import { ChangePasswordForm } from '@/components/profile/change-password-form'
-import { ConnectedAccountsCard } from '@/components/profile/connected-accounts-card'
 import { DangerZoneCard } from '@/components/profile/danger-zone-card'
 import { UniauthAccountCard } from '@/components/profile/uniauth-account-card'
-import { isUniauthMode } from '@/src/lib/auth/mode'
 import { Button } from '@/components/ui/button'
 import { Skeleton } from '@/components/ui/skeleton'
 import { ProfileTabs, type Tab } from '@/components/profile/profile-tabs'
@@ -42,14 +38,7 @@ function ProfileContent({ user }: { user: UserProfileEntity }) {
     <>
       <ProfileHeaderCard user={user} />
       <EditProfileForm user={user} />
-      {isUniauthMode ? (
-        <UniauthAccountCard />
-      ) : (
-        <>
-          <ChangePasswordForm />
-          <ConnectedAccountsCard />
-        </>
-      )}
+      <UniauthAccountCard />
       <DangerZoneCard />
       <ProfileTabs
         activeTab={activeTab}
@@ -62,11 +51,8 @@ function ProfileContent({ user }: { user: UserProfileEntity }) {
 }
 
 function SignOutButton() {
-  const router = useRouter()
-
   async function handleSignOut() {
-    await authClient.signOut()
-    router.replace('/login')
+    await signOut()
   }
 
   return (

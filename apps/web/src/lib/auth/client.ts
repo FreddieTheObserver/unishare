@@ -15,7 +15,7 @@ export const authClient = createAuthClient({
       },
     }),
     adminClient({ ac, roles }),
-    // Sign-in through uniauth (provider id `uniauth`) when NEXT_PUBLIC_AUTH_MODE=uniauth.
+    // Sign-in through uniauth (provider id `uniauth`).
     genericOAuthClient(),
   ],
 })

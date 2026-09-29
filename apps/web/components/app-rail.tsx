@@ -3,7 +3,7 @@
 import { useState } from 'react'
 import Image from 'next/image'
 import Link from 'next/link'
-import { usePathname, useRouter } from 'next/navigation'
+import { usePathname } from 'next/navigation'
 import {
   Bell,
   ChevronLeft,
@@ -143,7 +143,6 @@ function CollapsedAdminMenu({ items }: { items: NavigationItem[] }) {
 }
 
 export function AppRail() {
-  const router = useRouter()
   const { session, isAuthenticated } = useAuth()
   const user = session?.user
   const collapsed = useUIStore((state) => state.sidebarCollapsed)
@@ -159,7 +158,7 @@ export function AppRail() {
   const groups = buildVisibleNavigation(isAuthenticated, user?.role)
 
   async function handleSignOut() {
-    await signOut(router)
+    await signOut()
   }
 
   return (

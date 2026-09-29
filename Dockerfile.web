@@ -25,10 +25,7 @@ ARG APP_URL
 ENV APP_URL=$APP_URL
 ENV NEXT_PUBLIC_APP_URL=$APP_URL
 
-# Identity provider, baked in like every NEXT_PUBLIC_* value: an image is either legacy or
-# uniauth, so switching modes means building and deploying a new web image.
-ARG AUTH_MODE=legacy
-ENV NEXT_PUBLIC_AUTH_MODE=$AUTH_MODE
+# uniauth's origin (central sign-in), baked in like every NEXT_PUBLIC_* value.
 ARG UNIAUTH_URL=
 ENV NEXT_PUBLIC_UNIAUTH_URL=$UNIAUTH_URL
 ENV NEXT_TELEMETRY_DISABLED=1
