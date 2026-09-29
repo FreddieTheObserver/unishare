@@ -59,13 +59,14 @@ export async function signInWithUniauth({
   } catch {
     // Without storage an error just lands on /feed.
   }
-  await authClient.signIn.oauth2({
-    providerId: 'uniauth',
+  // Better Auth 1.7 registers genericOAuth providers as social providers.
+  await authClient.signIn.social({
+    provider: 'uniauth',
     callbackURL: returnTo,
     // Every error goes through /auth/return: login_required quietly returns to returnTo,
     // anything else (e.g. BANNED_USER) is explained on /login.
     errorCallbackURL: `${window.location.origin}/auth/return`,
-    ...(silent && { additionalData: { prompt: 'none' } }),
+    ...(silent && { additionalParams: { prompt: 'none' } }),
   })
 }
 

@@ -17,10 +17,9 @@ const profile = (extra: Record<string, unknown> = {}) => ({
 })
 
 describe('mapUniauthProfile', () => {
-  it('maps identity fields from uniauth', async () => {
+  it('maps identity fields from uniauth, never the local id', async () => {
     const map = mapUniauthProfile(prismaWith([]))
     await expect(map(profile())).resolves.toEqual({
-      id: 'ua_1',
       email: 'ada@kmutt.ac.th',
       emailVerified: true,
       name: 'Ada',
