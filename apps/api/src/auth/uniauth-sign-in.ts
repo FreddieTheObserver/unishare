@@ -3,6 +3,14 @@ import type { PrismaClient } from '../generated/prisma/client'
 /** uniauth puts university memberships here (ID token + userinfo). */
 export const ORGANIZATIONS_CLAIM = 'urn:uniauth:organizations'
 
+/** mapUniauthProfile's "no avatar" (see there). */
+export const NO_AVATAR = ''
+
+/** Stores NO_AVATAR as null, on create and on the sign-in update. */
+export function withoutAvatarPlaceholder<T extends { image?: string | null }>(data: T): T {
+  return data.image === NO_AVATAR ? { ...data, image: null } : data
+}
+
 interface UniauthProfile {
   sub: string
   email: string
@@ -26,7 +34,9 @@ export function mapUniauthProfile(prisma: PrismaClient) {
       email: profile.email,
       emailVerified: profile.email_verified === true,
       name: profile.name || profile.email,
-      image: profile.picture ?? undefined,
+      // Better Auth 1.7 ignores an undefined image, so a removed uniauth avatar would never
+      // clear here. '' says "no avatar"; the user hooks in auth.config.ts store it as null.
+      image: profile.picture || NO_AVATAR,
       ...(universityId && { universityId }),
     }
   }

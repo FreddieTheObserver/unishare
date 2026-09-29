@@ -7,7 +7,7 @@ import { UserRole } from '../generated/prisma/client'
 import { PrismaClient } from '../generated/prisma/client'
 import { PrismaPg } from '@prisma/adapter-pg'
 import { uniauthConfig, UNIAUTH_PROVIDER_ID } from './uniauth-config'
-import { mapUniauthProfile } from './uniauth-sign-in'
+import { mapUniauthProfile, withoutAvatarPlaceholder } from './uniauth-sign-in'
 
 const isProduction = process.env.NODE_ENV === 'production'
 export const isMcpEnabled = process.env.MCP_ENABLED === 'true'
@@ -138,6 +138,7 @@ export const auth = betterAuth({
   databaseHooks: {
     user: {
       create: {
+        before: async (user) => ({ data: withoutAvatarPlaceholder(user) }),
         // Guests accept the terms by continuing as a guest. Everyone else accepts them on
         // unishare's own consent screen (POST /users/me/consent): signing up on another app
         // (unigym) and arriving here through single sign-on is not agreeing to unishare's.
@@ -149,6 +150,9 @@ export const auth = betterAuth({
             })
           }
         },
+      },
+      update: {
+        before: async (data) => ({ data: withoutAvatarPlaceholder(data) }),
       },
     },
   },
