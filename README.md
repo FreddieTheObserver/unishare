@@ -37,7 +37,7 @@ Designed to be self-hosted and configurable for any university.
 
 - Node.js 20+
 - pnpm
-- PostgreSQL database (or [Neon](https://neon.tech) for serverless)
+- PostgreSQL database with the [pgvector](https://github.com/pgvector/pgvector) extension (or [Neon](https://neon.tech) for serverless, which supports it)
 
 ### 1. Install dependencies
 
@@ -66,7 +66,16 @@ NEXT_PUBLIC_API_URL=http://localhost:3001
 BETTER_AUTH_SECRET=your-secret
 ```
 
-### 3. Run database migrations & seed
+### 3. Generate clients
+
+The Prisma client and the frontend API client are gitignored, so generate them after cloning:
+
+```bash
+pnpm --filter api db:generate
+pnpm --filter web api:generate
+```
+
+### 4. Run database migrations & seed
 
 ```bash
 cd apps/api
@@ -74,7 +83,7 @@ pnpm prisma migrate dev
 pnpm prisma db seed
 ```
 
-### 4. Start development servers
+### 5. Start development servers
 
 ```bash
 pnpm dev
