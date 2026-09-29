@@ -38,7 +38,10 @@ function takeOverLegacySessionCookie(request: NextRequest) {
       })
       // The old cookie was set on the parent domain when deployed (host-only locally). Next
       // serializes Set-Cookie from response.cookies, one entry per name.
-      const host = request.nextUrl.hostname
+      // The public host: behind the ingress, nextUrl carries the container's own address.
+      const host = process.env.NEXT_PUBLIC_APP_URL
+        ? new URL(process.env.NEXT_PUBLIC_APP_URL).hostname
+        : request.nextUrl.hostname
       const domain =
         host.includes('.') && !/^[\d.]+$/.test(host)
           ? host.split('.').slice(-2).join('.')
