@@ -20,7 +20,7 @@ import {
   updateMessageInInfiniteCache,
 } from '@/lib/utils/infinite-query-cache'
 
-const SOCKET_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001'
+import { socketURL } from '@/src/lib/socket-url'
 
 export interface ChatSocketContextValue {
   socketRef: RefObject<Socket | null>
@@ -45,7 +45,7 @@ export function ChatSocketProvider({ children }: { children: ReactNode }) {
 
     // websocket-only: the HTTP long-polling fallback breaks behind a
     // round-robin load balancer without sticky sessions.
-    const socket = io(`${SOCKET_URL}/chat`, {
+    const socket = io(`${socketURL}/chat`, {
       withCredentials: true,
       transports: ['websocket'],
     })

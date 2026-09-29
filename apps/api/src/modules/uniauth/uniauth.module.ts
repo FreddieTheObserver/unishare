@@ -1,11 +1,11 @@
 import { Module } from '@nestjs/common'
-import { isUniauthMode } from '@/auth/auth-mode'
 import { UniauthController } from './uniauth.controller'
 import { UniauthLogoutService } from './uniauth-logout.service'
+import { UniauthUserDeletedService } from './uniauth-user-deleted.service'
 
-/** uniauth → unishare callbacks. Mounted only when AUTH_MODE=uniauth. */
+/** uniauth → unishare server-to-server callbacks (sign-out, account deletion). */
 @Module({
-  controllers: isUniauthMode ? [UniauthController] : [],
-  providers: [UniauthLogoutService],
+  controllers: [UniauthController],
+  providers: [UniauthLogoutService, UniauthUserDeletedService],
 })
 export class UniauthModule {}

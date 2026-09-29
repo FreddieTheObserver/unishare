@@ -1,6 +1,7 @@
 'use client'
 
 import { createContext, useContext, useEffect, type ReactNode } from 'react'
+import { usePathname } from 'next/navigation'
 import { useQueryClient } from '@tanstack/react-query'
 import { authClient } from '@/src/lib/auth/client'
 import {
@@ -10,8 +11,8 @@ import {
 import type { UserProfileEntity } from '@/src/lib/api/generated/unishareAPI.schemas'
 import { generateKeyPair, exportPublicKey, isEcPublicKey } from '@/src/lib/crypto'
 import { getPrivateKey, storePrivateKey } from '@/src/lib/indexeddb'
-import { isUniauthMode } from '@/src/lib/auth/mode'
 import { signInWithUniauth, silentCheckDone } from '@/src/lib/auth/uniauth'
+import { ConsentGate } from '@/components/auth/consent-gate'
 
 type Session = NonNullable<ReturnType<typeof authClient.useSession>['data']>
 
@@ -42,7 +43,12 @@ async function generateAndUploadKeys(userId: string): Promise<string> {
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const queryClient = useQueryClient()
-  const { data: session, isPending: sessionPending } = authClient.useSession()
+  const pathname = usePathname()
+  const {
+    data: session,
+    isPending: sessionPending,
+    refetch: refetchSession,
+  } = authClient.useSession()
   const { data: user, isPending: userPending } = useUsersControllerGetMe({
     query: {
       enabled: !!session?.user,
@@ -66,16 +72,26 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     init().catch(console.error)
   }, [user, queryClient])
 
-  // uniauth mode: a signed-out visitor who is already signed in to uniauth (from another app)
+  // A signed-out visitor who is already signed in to uniauth (from another app)
   // is signed in here too — one invisible prompt=none round-trip per browser session.
   useEffect(() => {
-    if (!isUniauthMode || sessionPending || session || silentCheckDone()) return
+    if (sessionPending || session || silentCheckDone()) return
     if (window.location.pathname.startsWith('/login')) return
     signInWithUniauth({ returnTo: window.location.href, silent: true }).catch(console.error)
   }, [session, sessionPending])
 
   const isLoading = sessionPending || (!!session?.user && userPending)
   const isAuthenticated = !!session?.user
+  // Guests accept the terms by continuing as a guest (the API records it); everyone else once
+  // here. The terms themselves stay readable.
+  const sessionUser = session?.user as
+    { isAnonymous?: boolean | null; consentGivenAt?: Date | string | null } | undefined
+  const needsConsent =
+    !!sessionUser &&
+    !sessionUser.isAnonymous &&
+    !sessionUser.consentGivenAt &&
+    pathname !== '/terms' &&
+    pathname !== '/privacy'
 
   return (
     <AuthContext
@@ -86,7 +102,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         isAuthenticated,
       }}
     >
-      {children}
+      {needsConsent ? <ConsentGate onAccepted={() => refetchSession()} /> : children}
     </AuthContext>
   )
 }

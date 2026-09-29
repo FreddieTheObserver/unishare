@@ -165,7 +165,6 @@ jobs:
           build-args: |
             API_URL=${{ needs.changes.outputs.env == 'dev' && secrets.DEV_API_URL || secrets.API_URL }}
             APP_URL=${{ needs.changes.outputs.env == 'dev' && secrets.DEV_APP_URL || secrets.APP_URL }}
-            AUTH_MODE=${{ needs.changes.outputs.env == 'dev' && vars.DEV_AUTH_MODE || vars.AUTH_MODE }}
             UNIAUTH_URL=${{ needs.changes.outputs.env == 'dev' && vars.DEV_UNIAUTH_URL || vars.UNIAUTH_URL }}
           cache-from: type=gha,scope=web
           cache-to: type=gha,mode=max,scope=web

@@ -80,11 +80,14 @@ describe('mcp-token.verifier', () => {
     })
   })
 
-  it('verifies nothing when MCP_AUTH_ISSUER is unset (legacy mode)', async () => {
-    const token = await sign({ sub: 'user-1' })
-    const verifier = loadVerifier({ MCP_AUTH_ISSUER: '', FRONTEND_URL: 'http://share.test' })
-    expect(verifier.mcpAuthIssuer).toBeUndefined()
-    await expect(verifier.verifyMcpAccessToken(token)).resolves.toBeNull()
+  it('defaults to the uniauth issuer when MCP_AUTH_ISSUER is unset', () => {
+    process.env.UNIAUTH_ISSUER = 'http://auth.test/api/auth/'
+    try {
+      const verifier = loadVerifier({ MCP_AUTH_ISSUER: '', FRONTEND_URL: 'http://share.test' })
+      expect(verifier.mcpAuthIssuer).toBe(issuer)
+    } finally {
+      delete process.env.UNIAUTH_ISSUER
+    }
   })
 
   it('extracts bearer tokens only', () => {

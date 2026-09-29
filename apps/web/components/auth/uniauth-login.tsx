@@ -101,6 +101,17 @@ export function UniauthLogin() {
             {loading ? 'Redirecting…' : 'Continue'}
           </Button>
           {message && <p className="text-xs text-destructive mt-3 text-center">{message}</p>}
+          <p className="text-xs text-text-muted text-center mt-4">
+            By continuing you agree to Unishare&rsquo;s{' '}
+            <Link href="/terms" className="underline hover:text-foreground transition-colors">
+              Terms
+            </Link>{' '}
+            and{' '}
+            <Link href="/privacy" className="underline hover:text-foreground transition-colors">
+              Privacy Policy
+            </Link>
+            .
+          </p>
 
           <div className="flex items-center gap-4 mt-6">
             <div className="flex-1 h-px bg-border" />

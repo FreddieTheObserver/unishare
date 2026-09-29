@@ -1,31 +1,40 @@
 import { createRemoteJWKSet, jwtVerify } from 'jose'
+import { uniauthConfig } from '@/auth/uniauth-config'
 import type { McpAuthSession } from './dto/mcp-auth-session.dto'
 
 /**
- * When set, MCP access tokens are issued by uniauth and verified here against its
- * JWKS; unishare's own Better Auth mcp() plugin is bypassed. Unset keeps the
- * legacy in-process flow (removed once unishare's auth moves to uniauth).
- *
- * e.g. MCP_AUTH_ISSUER=https://auth.psstee.dev/api/auth (defaults to UNIAUTH_ISSUER when
- * AUTH_MODE=uniauth).
+ * MCP access tokens are issued by uniauth and verified here against its JWKS.
+ * MCP_AUTH_ISSUER overrides the issuer (defaults to UNIAUTH_ISSUER).
  *
  * The session's userId is the token's `sub` — a **uniauth** user id. Callers map it to the
  * local user with resolveLocalUserId before touching unishare data.
  */
-export const mcpAuthIssuer =
-  process.env.MCP_AUTH_ISSUER ||
-  (process.env.AUTH_MODE === 'uniauth' ? process.env.UNIAUTH_ISSUER : undefined) ||
-  undefined
+export const mcpAuthIssuer = (process.env.MCP_AUTH_ISSUER || uniauthConfig.issuer).replace(
+  /\/+$/,
+  '',
+)
+
+/** The permissions unishare's MCP tools check; uniauth only issues them. */
+export const mcpScopes = [
+  'openid',
+  'profile',
+  'email',
+  'offline_access',
+  'boards:read',
+  'boards:write',
+  'posts:read',
+  'posts:write',
+  'courses:read',
+]
 
 /** Canonical MCP resource URL — the audience uniauth binds tokens to. */
 export const mcpResource = `${process.env.FRONTEND_URL ?? 'http://localhost:3000'}/mcp`
 
 // Keys are fetched lazily and cached by jose; a token signed by a rotated key
 // triggers one refetch (rate-limited by jose's cooldown).
-const jwks = mcpAuthIssuer ? createRemoteJWKSet(new URL(`${mcpAuthIssuer}/jwks`)) : undefined
+const jwks = createRemoteJWKSet(new URL(`${mcpAuthIssuer}/jwks`))
 
 export async function verifyMcpAccessToken(token: string): Promise<McpAuthSession | null> {
-  if (!jwks || !mcpAuthIssuer) return null
   try {
     const { payload } = await jwtVerify(token, jwks, {
       issuer: mcpAuthIssuer,
@@ -44,7 +53,7 @@ export function bearerToken(authorization: string | undefined): string | null {
 }
 
 /** RFC 9728 metadata telling MCP clients that uniauth is the authorization server. */
-export function protectedResourceMetadata(scopes: string[]) {
+export function protectedResourceMetadata(scopes: string[] = mcpScopes) {
   return {
     resource: mcpResource,
     authorization_servers: [mcpAuthIssuer],

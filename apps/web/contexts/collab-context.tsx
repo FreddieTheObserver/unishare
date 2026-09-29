@@ -15,6 +15,7 @@ import { toast } from 'sonner'
 import type { ExcalidrawImperativeAPI } from '@excalidraw/excalidraw/types'
 import type { ExcalidrawElement } from '@excalidraw/excalidraw/element/types'
 import { encryptElement, decryptElement, type EncryptedWireElement } from '@/src/lib/board-crypto'
+import { socketURL } from '@/src/lib/socket-url'
 
 type ConnectionStatus = 'connecting' | 'connected' | 'disconnected'
 
@@ -227,8 +228,7 @@ export function CollabProvider({
     unmountingRef.current = false
     const pendingElements = pendingElementsRef.current
 
-    const apiUrl = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:3001'
-    const socket = io(`${apiUrl}/collab`, {
+    const socket = io(`${socketURL}/collab`, {
       withCredentials: true,
       autoConnect: false,
       transports: ['websocket'],
