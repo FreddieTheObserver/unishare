@@ -111,8 +111,9 @@ unishare's profile page links there for security settings and keeps what is unis
 
 ## Sign-out
 
-- **Sign out** in unishare: end the unishare session, then RP-initiated logout at uniauth's
-  `end_session_endpoint`, which ends the uniauth session and returns to unishare.
+- **Sign out** in unishare: end the unishare session, then uniauth's own `/logout` page, which
+  ends the uniauth session and returns to unishare. (Not the OIDC end-session endpoint: without a
+  usable `id_token_hint` it shows Better Auth's unstyled confirmation page.)
 - **Other apps:** uniauth's **back-channel logout** notifies each client's
   `backchannel_logout_uri`; unishare gets a small endpoint that verifies the logout token and
   revokes that user's unishare sessions. Without it, other apps stay signed in until their own

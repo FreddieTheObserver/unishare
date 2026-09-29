@@ -1,4 +1,5 @@
 import { authClient } from './client'
+import { uniauthURL } from './mode'
 
 /**
  * A signed-out visitor is silently checked at most once per 10 minutes across all tabs, so
@@ -69,13 +70,14 @@ export async function signInWithUniauth({
 }
 
 /**
- * Ends the unishare session, then uniauth's (RP-initiated logout). The URL is fetched first:
- * the API needs the session to find the ID token uniauth uses to skip its confirmation page.
+ * Ends the unishare session, then uniauth's: its /logout page signs out there (which tells
+ * every other app through back-channel logout) and comes back here. Not the OIDC end-session
+ * endpoint: without a usable id_token_hint that shows Better Auth's unstyled confirmation page.
  */
 export async function signOutOfUniauth() {
-  const res = await fetch('/api/uniauth/logout-url', { credentials: 'include' }).catch(() => null)
-  const url = res?.ok ? ((await res.json()) as { data?: { url?: string } | null }).data?.url : null
   await authClient.signOut()
   markSilentChecked()
-  window.location.assign(url ?? '/')
+  window.location.assign(
+    `${uniauthURL}/logout?redirect=${encodeURIComponent(`${window.location.origin}/`)}`,
+  )
 }

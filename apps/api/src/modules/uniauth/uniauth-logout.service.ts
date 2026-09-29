@@ -1,6 +1,6 @@
 import { Injectable, Logger } from '@nestjs/common'
 import { createRemoteJWKSet, jwtVerify, type JWTPayload } from 'jose'
-import { UNIAUTH_PROVIDER_ID, uniauthConfig } from '@/auth/auth-mode'
+import { uniauthConfig } from '@/auth/auth-mode'
 import { PrismaService } from '@/prisma/prisma.service'
 import { resolveLocalUserId } from '../mcp/mcp-token.verifier'
 
@@ -42,26 +42,5 @@ export class UniauthLogoutService {
     const { count } = await this.prisma.session.deleteMany({ where: { userId } })
     this.logger.log(`Back-channel logout ended ${count} session(s) for ${userId}`)
     return true
-  }
-
-  /**
-   * uniauth's RP-initiated logout URL. With the ID token as id_token_hint uniauth signs the
-   * user out and returns straight to unishare; without one it would ask for confirmation.
-   */
-  async endSessionUrl(userId: string): Promise<{ url: string } | null> {
-    if (!uniauthConfig) return null
-    const account = await this.prisma.account.findFirst({
-      where: { userId, providerId: UNIAUTH_PROVIDER_ID },
-      select: { idToken: true },
-      orderBy: { updatedAt: 'desc' },
-    })
-    const url = new URL(`${uniauthConfig.issuer}/oauth2/end-session`)
-    url.searchParams.set('client_id', uniauthConfig.clientId)
-    url.searchParams.set(
-      'post_logout_redirect_uri',
-      `${process.env.FRONTEND_URL ?? 'http://localhost:3000'}/`,
-    )
-    if (account?.idToken) url.searchParams.set('id_token_hint', account.idToken)
-    return { url: url.toString() }
   }
 }
