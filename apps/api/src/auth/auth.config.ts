@@ -35,9 +35,8 @@ const trustedOrigins = [
 export const auth = betterAuth({
   baseURL: process.env.BETTER_AUTH_URL,
   secret: process.env.BETTER_AUTH_SECRET,
-  // genericOAuth (1.6) sends provider errors — including login_required from the silent
-  // prompt=none check — here before reading the sign-in's errorCallbackURL. The web page
-  // sends login_required back to where the visitor was and other errors to /login.
+  // Errors with no sign-in to return to (e.g. a callback without state). Sign-ins pass
+  // errorCallbackURL=/auth/return themselves; the page handles both the same way.
   onAPIError: {
     errorURL: `${process.env.FRONTEND_URL ?? 'http://localhost:3000'}/auth/return`,
   },
@@ -57,6 +56,7 @@ export const auth = betterAuth({
     genericOAuth({
       config: [
         {
+          // Callback: <BETTER_AUTH_URL>/api/auth/callback/uniauth (a social provider in 1.7).
           providerId: UNIAUTH_PROVIDER_ID,
           discoveryUrl: `${uniauthConfig.issuer}/.well-known/openid-configuration`,
           clientId: uniauthConfig.clientId,
@@ -67,13 +67,8 @@ export const auth = betterAuth({
           // Name, avatar and university are uniauth's: refreshed on every sign-in.
           overrideUserInfo: true,
           mapProfileToUser: mapUniauthProfile(prisma),
-          // The web app's silent check signs in with additionalData.prompt = 'none':
+          // The web app's silent check signs in with additionalParams { prompt: 'none' }:
           // uniauth answers instantly (signed in) or with login_required.
-          authorizationUrlParams: (ctx): Record<string, string> =>
-            (ctx.body as { additionalData?: { prompt?: string } } | undefined)?.additionalData
-              ?.prompt === 'none'
-              ? { prompt: 'none' }
-              : {},
         },
       ],
     }),

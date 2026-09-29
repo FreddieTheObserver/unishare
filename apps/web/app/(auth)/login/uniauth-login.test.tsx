@@ -18,7 +18,7 @@ vi.mock('@/src/lib/api/generated/universities/universities', () => ({
   useUniversitiesControllerFindAll: () => ({ data: [] }),
 }))
 vi.mock('@/src/lib/auth/client', () => ({
-  authClient: { signIn: { oauth2: vi.fn(), social: vi.fn(), email: vi.fn() } },
+  authClient: { signIn: { social: vi.fn() } },
 }))
 
 // Imported after the mocks.
@@ -39,11 +39,11 @@ describe('login page', () => {
     document.cookie = 'unishare_uniauth_checked=; Max-Age=0; Path=/'
     params.next = '/profile'
     render(<LoginPage />)
-    expect(authClient.signIn.oauth2).toHaveBeenCalledWith({
-      providerId: 'uniauth',
+    expect(authClient.signIn.social).toHaveBeenCalledWith({
+      provider: 'uniauth',
       callbackURL: `${window.location.origin}/profile`,
       errorCallbackURL: `${window.location.origin}/auth/return`,
-      additionalData: { prompt: 'none' },
+      additionalParams: { prompt: 'none' },
     })
     // login_required must come back to this page (not to /profile as a guest).
     expect(sessionStorage.getItem('unishare:uniauth-return-to')).toBe(window.location.href)
@@ -54,7 +54,7 @@ describe('login page', () => {
     params.next = '//evil.example/x'
     render(<LoginPage />)
     await userEvent.click(screen.getByRole('button', { name: 'Continue' }))
-    expect(authClient.signIn.oauth2).toHaveBeenCalledWith(
+    expect(authClient.signIn.social).toHaveBeenCalledWith(
       expect.objectContaining({ callbackURL: `${window.location.origin}/feed` }),
     )
   })
@@ -69,8 +69,8 @@ describe('login page', () => {
   it('starts an interactive uniauth sign-in that returns to the feed', async () => {
     render(<LoginPage />)
     await userEvent.click(screen.getByRole('button', { name: 'Continue' }))
-    expect(authClient.signIn.oauth2).toHaveBeenCalledWith({
-      providerId: 'uniauth',
+    expect(authClient.signIn.social).toHaveBeenCalledWith({
+      provider: 'uniauth',
       callbackURL: `${window.location.origin}/feed`,
       errorCallbackURL: `${window.location.origin}/auth/return`,
     })
