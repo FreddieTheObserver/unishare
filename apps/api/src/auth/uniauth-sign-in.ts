@@ -21,12 +21,12 @@ export function mapUniauthProfile(prisma: PrismaClient) {
   return async (raw: Record<string, unknown>) => {
     const profile = raw as unknown as UniauthProfile
     const universityId = await universityForMemberships(prisma, profile[ORGANIZATIONS_CLAIM] ?? [])
+    // No id: the local user is matched through the account row (accountId = sub), never by id.
     return {
-      id: profile.sub,
       email: profile.email,
       emailVerified: profile.email_verified === true,
       name: profile.name || profile.email,
-      image: profile.picture ?? null,
+      image: profile.picture ?? undefined,
       ...(universityId && { universityId }),
     }
   }

@@ -31,7 +31,7 @@
     "@excalidraw/excalidraw": "^0.18.1",
     "@hookform/resolvers": "^5.5.7",
     "@tanstack/react-query": "^5.101.4",
-    "better-auth": "^1.6.25",
+    "better-auth": "^1.7.6",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "date-fns": "^4.4.0",
