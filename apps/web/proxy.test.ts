@@ -18,11 +18,9 @@ describe('proxy', () => {
       expect.stringMatching(/^__Secure-unishare\.session_token=tok\.sig%3D;.*HttpOnly/i),
     )
     expect(setCookies.find((c) => c.startsWith('__Secure-unishare'))).not.toMatch(/Domain=/i)
-    expect(setCookies).toContainEqual(
-      expect.stringMatching(
-        /^__Secure-better-auth\.session_token=; Domain=psstee\.dev;.*Max-Age=0/,
-      ),
-    )
+    const legacy = setCookies.find((c) => c.startsWith('__Secure-better-auth.session_token='))
+    expect(legacy).toMatch(/Domain=psstee\.dev/i)
+    expect(legacy).toMatch(/Max-Age=0/)
     // The rewrite to the API authenticates with the new name on this very request.
     expect(res.headers.get('x-middleware-request-cookie')).toContain(
       '__Secure-unishare.session_token=',

@@ -36,15 +36,21 @@ function takeOverLegacySessionCookie(request: NextRequest) {
         path: '/',
         maxAge: SESSION_MAX_AGE,
       })
-      response.cookies.delete(legacyName)
+      // The old cookie was set on the parent domain when deployed (host-only locally). Next
+      // serializes Set-Cookie from response.cookies, one entry per name.
       const host = request.nextUrl.hostname
-      if (host.includes('.') && !/^[\d.]+$/.test(host)) {
-        const parent = host.split('.').slice(-2).join('.')
-        response.headers.append(
-          'Set-Cookie',
-          `${legacyName}=; Domain=${parent}; Path=/; Max-Age=0; HttpOnly; SameSite=Lax${secure ? '; Secure' : ''}`,
-        )
-      }
+      const domain =
+        host.includes('.') && !/^[\d.]+$/.test(host)
+          ? host.split('.').slice(-2).join('.')
+          : undefined
+      response.cookies.set(legacyName, '', {
+        ...(domain && { domain }),
+        httpOnly: true,
+        secure,
+        sameSite: 'lax',
+        path: '/',
+        maxAge: 0,
+      })
       return response
     }
   }
