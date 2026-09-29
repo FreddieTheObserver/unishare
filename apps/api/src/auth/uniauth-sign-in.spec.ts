@@ -1,5 +1,10 @@
 import type { PrismaClient } from '../generated/prisma/client'
-import { mapUniauthProfile, ORGANIZATIONS_CLAIM } from './uniauth-sign-in'
+import {
+  NO_AVATAR,
+  withoutAvatarPlaceholder,
+  mapUniauthProfile,
+  ORGANIZATIONS_CLAIM,
+} from './uniauth-sign-in'
 
 function prismaWith(universities: { id: string; uniauthOrgId: string }[]) {
   return {
@@ -55,5 +60,23 @@ describe('mapUniauthProfile', () => {
     const map = mapUniauthProfile(prismaWith([]))
     const mapped = await map(profile({ email_verified: undefined, name: '' }))
     expect(mapped).toMatchObject({ emailVerified: false, name: 'ada@kmutt.ac.th' })
+  })
+
+  it('says "no avatar" when uniauth has none, so a removed avatar clears here too', async () => {
+    const map = mapUniauthProfile(prismaWith([]))
+    await expect(map(profile({ picture: null }))).resolves.toMatchObject({ image: NO_AVATAR })
+  })
+})
+
+describe('withoutAvatarPlaceholder', () => {
+  it('stores the placeholder as null and leaves real avatars alone', () => {
+    expect(withoutAvatarPlaceholder({ name: 'Ada', image: NO_AVATAR })).toEqual({
+      name: 'Ada',
+      image: null,
+    })
+    expect(withoutAvatarPlaceholder({ image: 'https://img/ada.png' })).toEqual({
+      image: 'https://img/ada.png',
+    })
+    expect(withoutAvatarPlaceholder({ bio: 'hi' })).toEqual({ bio: 'hi' })
   })
 })
