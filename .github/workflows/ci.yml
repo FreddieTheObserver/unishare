@@ -11,6 +11,9 @@ jobs:
     name: Lint & Build
     runs-on: ubuntu-latest
     if: github.actor != 'unishare-release-bot[bot]'
+    permissions:
+      contents: read
+      packages: read
 
     steps:
       - name: Checkout
@@ -29,6 +32,8 @@ jobs:
 
       - name: Install dependencies
         run: pnpm install
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.GH_PACKAGES_TOKEN || secrets.GITHUB_TOKEN }}
 
       - name: Generate Prisma client
         run: pnpm --filter api db:generate
