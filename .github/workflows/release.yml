@@ -45,6 +45,8 @@ jobs:
 
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.GH_PACKAGES_TOKEN || secrets.GITHUB_TOKEN }}
 
       # workflow_run jobs run on the default branch (dev), so semantic-release
       # would see GITHUB_REF=refs/heads/dev and skip; point it at main.
